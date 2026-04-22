@@ -54,4 +54,5 @@ This project currently exists separately from the OpenPnP architecture. It was n
 
 ---
 *Developed under the Michigan Technological University Open Source Hardware Enterprise (OSHE)*
+
 *ABET Accrediting: [Checklist](https://docs.google.com/document/d/1hHnjDPqjZ3jRmd8Yd_ip3oN7XcyjQFGSi8Tkr0fagdQ/edit?usp=sharing)*
