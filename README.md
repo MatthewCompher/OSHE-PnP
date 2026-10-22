@@ -16,15 +16,19 @@ The **OSHE Pick-and-Place** is a low-cost, open-source automated PCB assembly sy
 
 The system leverages the mechanical foundations of a Creality Ender 3, extending its capabilities into a dedicated manufacturing tool. By utilizing a vacuum-based toolhead and precision motion control, this project bridges the gap between manual prototyping and industrial production.
 
+The modern V3 system draws heavy inspiration in its CoreXY motion system from the Voron 2.3 3D printer.
+
 ### 🛠️ Core Technical Achievements
-* **Precision Motion Control:** Migrated to **Klipper Firmware** via Mainsail OS, allowing for higher-speed pathing and web-based machine management.
-* **Advanced Toolhead Design:** A custom-engineered 3D-printed assembly featuring full 360° rotation and an integrated vacuum pick system.
-* **Expanded Work Envelope:** Features a 370 x 480 mm footprint and support for PCBs up to 250 x 250 mm.
-* **Safety-First Integration:** Adheres to **ISO-12100 standards**, featuring dedicated emergency stop (E-Stop) hardware and passive shielding.
+
+* **Precision Motion Control:** xxxxxxxx
+* **Advanced Toolhead Design:** xxxxxxxxxx
+* **Expanded Work Envelope:** Features a xxxx mm footprint and support for PCBs up to xxxxxxx mm.
+* **Safety-First Integration:** xxxxxxx
 
 ### 📈 Current Project Status
-The Spring 2026 revision (V2.0) has successfully transitioned the project into a functional integration phase. The machine currently supports SMD components (0804 and larger). Future development focuses on integrating computer vision and automated reel loading.
-This project currently exists separately from the OpenPnP architecture. It was not designed around their software suite.
+
+The Fall 2026 revision (V3.0) has is the current work in progress iteration. 
+This project currently exists separately from the OpenPnP architecture. It was not designed around their software suite but could possibly be adapted.
 
 ---
 
@@ -50,7 +54,9 @@ This project currently exists separately from the OpenPnP architecture. It was n
 ## 💻 Getting Started
 1. Review the [Our Documentation](https://docs.google.com/document/d/1zdPMhOE8R7Szz68Ky9EoDyxVyp7iftD7q8Uco1WKPY8/edit?usp=sharing) for the full build guide. Follow along with the 3D printing settings outlined in [CAD]([link](https://github.com/OSHE-Github/OSHE-PnP/tree/main/CAD))
 2. Clone this repo to access the latest Klipper `printer.cfg`.
-3. Join the conversation on the [OSHE Website]([link](https://oshe.io/)) and check out other OSHE projects at our [enterprise GitHub](https://github.com/OSHE-Github)
+3. Join the conversation on the [OSHE Website]((https://oshe.io/)) and check out other OSHE projects at our [enterprise GitHub](https://github.com/OSHE-Github)
+
+## Project Sponsors
 
 ---
 *Developed under the Michigan Technological University Open Source Hardware Enterprise (OSHE)*
