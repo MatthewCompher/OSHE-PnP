@@ -1,6 +1,6 @@
-# OSHE Pick and Place (V2.0)
+# (WIP) OSHE Pick and Place (V3.0)
 
-![Project Status](https://img.shields.io/badge/Status-Active-brightgreen)
+![Project Status](https://img.shields.io/badge/Status-Work_in_Progress-yellow)
 ![License](https://img.shields.io/badge/License-GNU%20GPL%20v3-blue)
 ![Platform](https://img.shields.io/badge/Platform-Klipper-orange)
 
