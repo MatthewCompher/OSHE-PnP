@@ -18,12 +18,12 @@ This program is only useful to specific advanced users and requires specific set
 **Checker Board Used: 8 x 11 squares, 15 mm each**
 
 **Keys**:
-    SPACE / c : capture a frame (only saved if the checkerboard is detected)
-    k         : run calibration on this run's captures (shows tracked corners)
-    q / ESC   : quit
+    * SPACE / c : capture a frame (only saved if the checkerboard is detected)
+    * k         : run calibration on this run's captures (shows tracked corners)
+    * q / ESC   : quit
 
 **Terminal Commands**:
-    python calib_capture.py                 # camera 0, new timestamped run folder
-    python calib_capture.py --name cam_A    # captures/cam_A/ (re-running resumes it)
-    python calib_capture.py --camera 1      # a different camera
-    python calib_capture.py --width 1280 --height 720 --fps 30
+    * python calib_capture.py                 # camera 0, new timestamped run folder
+    * python calib_capture.py --name cam_A    # captures/cam_A/ (re-running resumes it)
+    * python calib_capture.py --camera 1      # a different camera
+    * python calib_capture.py --width 1280 --height 720 --fps 30
