@@ -1,0 +1,57 @@
+# ---- Edit this file; nothing else should need hardware-specific values ----
+
+[moonraker]
+url = "http://localhost:7125"
+feedrate_mm_min = 3000        # speed for vision-driven moves
+settle_s = 0.25               # wait after a move before grabbing a frame
+
+[machine]
+# Software travel limits: vision-driven moves outside these are refused.
+x_range = [0.0, 300.0]
+y_range = [0.0, 300.0]
+z_range = [0.0, 60.0]
+# Measured offsets (down_cam_offset_mm, up_cam_xy_mm) live in calibration/machine.json,
+# written by the calibrate-* commands.
+
+[cameras.up]                  # ASSUMPTION: cam_A is the up-facing one. Swap if wrong.
+device = "/dev/v4l/by-path/REPLACE_ME-video-index0"
+calibration = "calibration/calibration_cam_A.npz"
+motion_map = "calibration/motion_up.json"
+width = 1280
+height = 720
+fps = 30
+exposure = 0                  # 0 = leave camera auto; else manual UVC exposure value
+
+[cameras.down]
+device = "/dev/v4l/by-path/REPLACE_ME-video-index0"
+calibration = "calibration/calibration_cam_b.npz"
+motion_map = "calibration/motion_down.json"
+width = 1280
+height = 720
+fps = 30
+exposure = 0
+
+[lighting.up]                   # light rig that illuminates the part on the nozzle
+type = "none"                   # none | klipper_pin | klipper_led | gpio
+name = "up_light"               # Klipper object name (or BCM pin number for gpio)
+level = 1.0                     # 0..1 (PWM); use 1.0 for plain on/off pins
+settle_s = 0.20                 # wait after switching, before the frame that counts
+ambient_subtract = false        # also grab a light-off frame and subtract it
+keep_on = false                 # true = never switch (saves ~settle_s per inspection)
+search_radius_mm = 6.0          # how far from the nozzle axis to look for the part
+
+[log]
+db = "pnp_events.sqlite"
+
+[datum]
+# Geometry from the Fusion sketch. Datum frame: origin = lower-left dot, +Y toward the
+# top of the drawing (the "north" of the upside-down L), viewed from above.
+pitch_mm = 4.0                  # grid line-centre to line-centre
+cols = 4                        # cells across (along datum X)
+rows = 3                        # cells down (along datum Y)
+grid_center_mm = [15.0, 40.0]   # ASSUMPTION: grid centreline passes through the right dot. CONFIRM.
+dots_mm = [[0.0, 0.0], [0.0, 30.0], [40.0, 40.0]]
+dot_diameter_mm = 3.0
+# Rotation of the datum's +X axis relative to machine +X (degrees, CCW from above).
+# Only needs to be right to +-45 deg; it resolves the grid's 180-degree symmetry.
+expected_rotation_deg = 0.0
