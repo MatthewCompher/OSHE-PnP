@@ -31,7 +31,7 @@ With every version of the machine, certain hardware features are not required fo
 * All components exported to `.step` and/or `.stl` and are viewable in any CAD software.
 
 ## V3 Directory
-* **/Electrical**: Staging plate mounting for electrical hardware and HMI enclosure
+* **/Electrical**: Staging plate mounting for electrical hardware, HMI enclosure, up facing camera mount
     * Utilizes acrylic and PLA support to attach to the underside of the staging plate
 * **/Feeder**: Tape and reel feeding system, including our tape holder solution as well as modified 0816 low-profile feeder
 * **/Framing**: The PnP structure and CoreXY motion system support
