@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>How to Build | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html" aria-current="page">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>How to Build</h1>
+
+        <p>This guide gives the order of the V3 build, from a donor Ender 3 to a first placed board.
+        Each stage links to the page with the details.</p>
+
+        <div class="note verify">⚠ Verify: step-by-step V3 assembly instructions (with hardware counts per
+        step) are still being written. Stages marked <em>details to come</em> list what's needed and
+        which CAD folder to use. For a fully written-out (older) build, see the V2 guide linked from
+        <a href="history.html">History</a>.</div>
+
+        <h2 id="overview">Overview</h2>
+        <ol>
+          <li><a href="#prepare">Gather tools and materials</a></li>
+          <li><a href="#print">Print the parts</a></li>
+          <li><a href="#strip">Take apart the Ender 3</a></li>
+          <li><a href="#frame">Build the frame</a></li>
+          <li><a href="#motion">Install the CoreXY motion system</a></li>
+          <li><a href="#toolhead">Build and mount the toolhead</a></li>
+          <li><a href="#staging">Build the staging plate</a></li>
+          <li><a href="#feeders">Build the feeders</a></li>
+          <li><a href="#pneumatics">Install the pneumatics</a></li>
+          <li><a href="#electronics">Wire the electronics</a></li>
+          <li><a href="#software">Install the software</a></li>
+          <li><a href="#calibrate">Calibrate</a></li>
+          <li><a href="#first-job">Run a first job</a></li>
+        </ol>
+
+        <h2 id="prepare">1. Gather tools and materials</h2>
+        <h3 id="tools">Tools</h3>
+        <ul>
+          <li>Metric hex key set (most hardware is M3 and M5)</li>
+          <li>Metric wrench set</li>
+          <li>Needle-nose pliers</li>
+          <li>Wire strippers and crimpers (for connectors and belt crimps)</li>
+          <li>Soldering iron (for heat-set inserts)</li>
+          <li>A 3D printer that can print large parts</li>
+        </ul>
+        <h3 id="materials">Materials</h3>
+        <ul>
+          <li>A Creality Ender 3 (a broken one is fine) for extrusion, motors, belts and hardware</li>
+          <li>PETG and PLA filament</li>
+          <li>Plenty of M3, M4 and M5 T-nuts, plus the hardware in the BOM</li>
+          <li>Electronics: see <a href="electronics.html">Electronics</a></li>
+        </ul>
+        <div class="note verify">⚠ Verify: V3 filament amounts (V2 needed at least 2 kg PLA and 1 kg PETG).</div>
+
+        <h2 id="print">2. Print the parts</h2>
+        <p>Print everything in <code>CAD/V3-Active</code>. PETG is preferred for structural parts.
+        Use 0.2 mm layers, 2+ perimeters, 12% gyroid infill and tree supports.
+        See <a href="hardware.html#3d-printing">3D printing</a>.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Group</th><th>Folder</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Frame legs and spacers</td><td><code>Framing</code></td><td>A and B versions mirror each other</td></tr>
+            <tr><td>Motor and idler corners</td><td><code>Framing/TOP motor A|B</code>, <code>TOP idler A|B</code></td><td>Includes belt tensioners</td></tr>
+            <tr><td>X carriage</td><td><code>X-Axis</code></td><td>Upper/lower A and B, rail spacer</td></tr>
+            <tr><td>Staging plate</td><td><code>Staging/Plate</code>, <code>Support</code>, <code>Mounts</code></td><td>One camera tile, the rest regular tiles</td></tr>
+            <tr><td>Camera datum</td><td><code>Staging/Mounts/CameraDatum…</code></td><td>Multi-color <code>.3mf</code>, or the "NO AMS" parts printed separately</td></tr>
+            <tr><td>Feeders</td><td><code>Feeder</code></td><td>One set per feeder</td></tr>
+            <tr><td>Touchscreen mount</td><td><code>Electrical/HMI</code></td><td>Frame, arm, end mount</td></tr>
+          </tbody>
+        </table></div>
+        <figure class="img-slot" data-src="images/build-printed-parts.jpg" data-alt="All V3 printed parts laid out">
+              <div class="img-placeholder">Image placeholder: All V3 printed parts laid out<br><code>images/build-printed-parts.jpg</code></div>
+            </figure>
+
+        <h2 id="strip">3. Take apart the Ender 3</h2>
+        <ol>
+          <li>Unplug the printer and disconnect the power supply.</li>
+          <li>Remove the top bar, then the Z-axis lead screw and motor.</li>
+          <li>Remove the two bolts at the front of the base to reach the control board, and the two
+            bolts holding the LCD.</li>
+          <li>Unbolt the extrusions from each other. Keep the extrusion, stepper motors, belts, pulleys,
+            rollers, fan and all bolts and T-nuts. Factory holes in the extrusion can be ignored.</li>
+        </ol>
+        <p>Be careful with ribbon cables and don't yank any wires.</p>
+        <figure class="img-slot" data-src="images/build-ender3-teardown.jpg" data-alt="Ender 3 partly disassembled, showing which extrusions are reused">
+              <div class="img-placeholder">Image placeholder: Ender 3 partly disassembled, showing which extrusions are reused<br><code>images/build-ender3-teardown.jpg</code></div>
+            </figure>
+
+        <h2 id="frame">4. Build the frame</h2>
+        <p>Assemble the four legs from the bottom, middle and spacer pieces (mirror pairs A and B), and
+        join them with the 4040 extrusion and 4040 spacers. Make sure the frame is square before moving on:
+        an out-of-square frame causes position errors later.</p>
+        <p><em>Details to come.</em></p>
+        <figure class="img-slot" data-src="images/build-frame.jpg" data-alt="Assembled V3 frame without motion parts">
+              <div class="img-placeholder">Image placeholder: Assembled V3 frame without motion parts<br><code>images/build-frame.jpg</code></div>
+            </figure>
+
+        <h2 id="motion">5. Install the CoreXY motion system</h2>
+        <p>Mount the two motors in the motor corners and the idlers in the idler corners, fit the X
+        carriage, then run the two belts in the CoreXY pattern and tension them with the printed
+        tensioners. Belts should be firm but not over-tight.</p>
+        <p><em>Details to come.</em></p>
+        <figure class="img-slot" data-src="images/build-corexy-belts.jpg" data-alt="Belt routing diagram for the CoreXY system">
+              <div class="img-placeholder">Image placeholder: Belt routing diagram for the CoreXY system<br><code>images/build-corexy-belts.jpg</code></div>
+            </figure>
+
+        <h2 id="toolhead">6. Build and mount the toolhead</h2>
+        <p>Assemble the LumenPnP-style toolhead with its CP40 nozzle holder and NEMA 11 rotation motor,
+        mount the down camera, and attach it to the X carriage. Start with the N08 tip.</p>
+        <p><em>Details to come.</em></p>
+        <figure class="img-slot" data-src="images/build-toolhead.jpg" data-alt="Toolhead assembled, before mounting">
+              <div class="img-placeholder">Image placeholder: Toolhead assembled, before mounting<br><code>images/build-toolhead.jpg</code></div>
+            </figure>
+
+        <h2 id="staging">7. Build the staging plate</h2>
+        <ol>
+          <li>Assemble the plate tiles (with the camera tile over the up camera) on the brackets and spacers.</li>
+          <li>Mount the up camera and its LED ring under the camera tile.</li>
+          <li>Fix the camera datum and PCB mounts to the plate. <strong>The datum must not move</strong>
+            after calibration: if it does, visual homing and every step after it must be redone.</li>
+          <li>Add the reject bin.</li>
+        </ol>
+        <p><em>Details to come.</em></p>
+        <figure class="img-slot" data-src="images/build-staging-plate.jpg" data-alt="Staging plate with datum, PCB mounts and up camera opening">
+              <div class="img-placeholder">Image placeholder: Staging plate with datum, PCB mounts and up camera opening<br><code>images/build-staging-plate.jpg</code></div>
+            </figure>
+
+        <h2 id="feeders">8. Build the feeders</h2>
+        <p>Assemble each 0816 feeder with its servo, and connect the servos to the Arduino Nano
+        (signal pins 3, 5 and 6 by default). Power the servos from the controller board's 5 V rail and
+        join the Nano's ground to it. Follow the original
+        <a href="https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder">0816 feeder documentation</a> for the mechanism.</p>
+        <p><em>Details to come.</em></p>
+        <figure class="img-slot" data-src="images/build-feeder.jpg" data-alt="Feeder assembled with servo and tape loaded">
+              <div class="img-placeholder">Image placeholder: Feeder assembled with servo and tape loaded<br><code>images/build-feeder.jpg</code></div>
+            </figure>
+
+        <h2 id="pneumatics">9. Install the pneumatics</h2>
+        <p>Mount the compressor and valve, run the tubing to the toolhead, and wire the valve to the
+        FAN1 header.</p>
+        <p><em>Details to come.</em></p>
+
+        <h2 id="electronics">10. Wire the electronics</h2>
+        <p>Follow <a href="electronics.html">Electronics &amp; Safety</a>: Octopus Pro board, drivers,
+        motors, Raspberry Pi 4, cameras, LEDs, Uno, Nano and the emergency stop. Double-check every
+        motor's driver slot and wiring order before powering on.</p>
+        <figure class="img-slot" data-src="images/build-wiring.jpg" data-alt="Wired electronics bay">
+              <div class="img-placeholder">Image placeholder: Wired electronics bay<br><code>images/build-wiring.jpg</code></div>
+            </figure>
+
+        <h2 id="software">11. Install the software</h2>
+        <p>Follow <a href="software.html">Software</a>: MainsailOS on the Pi, Klipper on the Octopus Pro
+        and the Uno, the repository's <code>printer.cfg</code>, then <a href="moonraker.html">crowsnest
+        and the cameras</a>. Check each axis moves the right way at low speed before homing.</p>
+
+        <h2 id="calibrate">12. Calibrate</h2>
+        <ol>
+          <li>Check the frame is square, belts are tensioned and every axis moves freely.</li>
+          <li>Test homing at low speed. Tune sensorless homing if it stops early or crashes.</li>
+          <li>Run the camera and vision calibration in order: see <a href="vision.html#calibration">Vision → Calibration</a>.</li>
+        </ol>
+
+        <h2 id="first-job">13. Run a first job</h2>
+        <ol>
+          <li>Make a job file from your KiCad board with <a href="slicer.html">pnpslice</a>.</li>
+          <li>Align the board and do a dry run (photos only, no parts).</li>
+          <li>Run the job on a few parts first. See <a href="vision.html#running">Vision → Running a job</a>.</li>
+        </ol>
+        <figure class="img-slot" data-src="images/build-first-board.jpg" data-alt="A test PCB with parts placed by the machine">
+              <div class="img-placeholder">Image placeholder: A test PCB with parts placed by the machine<br><code>images/build-first-board.jpg</code></div>
+            </figure>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

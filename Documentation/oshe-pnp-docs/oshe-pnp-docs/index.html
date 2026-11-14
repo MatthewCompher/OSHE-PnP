@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Overview | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html" aria-current="page">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>OSHE Pick and Place</h1>
+
+        <figure class="img-slot" data-src="images/home-hero.jpg" data-alt="Photo of the complete V3 pick-and-place machine">
+              <div class="img-placeholder">Image placeholder: Photo of the complete V3 pick-and-place machine<br><code>images/home-hero.jpg</code></div>
+              <figcaption>The OSHE Pick and Place, V3 (Fall 2026).</figcaption>
+            </figure>
+
+        <p>The <strong>OSHE Pick and Place</strong> is a low-cost, open-source machine that places
+        surface-mount components onto printed circuit boards. Commercial pick-and-place machines are
+        expensive and mostly found in industry. This project brings automated PCB assembly within
+        reach of students, small labs and hobbyists.</p>
+
+        <p>It was built by students in the Open Source Hardware Enterprise (OSHE) at Michigan
+        Technological University. The machine starts from the parts of a Creality Ender 3 3D printer
+        (aluminum extrusion, stepper motors and hardware) and adds 3D-printed structure, a
+        vacuum toolhead, cameras and its own software. You can build it without special tools.</p>
+
+        <div class="note verify">
+          <strong>Work in progress.</strong> V3 (Fall 2026) is the current version and is still
+          being developed. Some sections of this site are marked as incomplete or "to be confirmed".
+        </div>
+
+        <h2 id="how-it-works">How it works</h2>
+
+        <p>A board goes from design to placed parts in five steps:</p>
+
+        <ol>
+          <li><strong>Design</strong> the board in KiCad.</li>
+          <li><strong>Slice</strong> it with <a href="slicer.html">pnpslice</a>, which turns the
+            <code>.kicad_pcb</code> file into one job file per board side.</li>
+          <li><strong>Align</strong> the board on the machine: <a href="vision.html">pnpvision</a>
+            uses the down camera to find the board's exact position and rotation.</li>
+          <li><strong>Pick, inspect and place</strong>: for each part, the nozzle picks it from a
+            feeder, the up camera checks how it sits on the nozzle, and the machine corrects the
+            offset and angle before placing it.</li>
+          <li><strong>Motion</strong> is carried out by <a href="software.html">Klipper</a>, driven
+            through <a href="moonraker.html">Moonraker</a>.</li>
+        </ol>
+
+        <figure class="img-slot" data-src="images/home-pipeline.png" data-alt="Diagram: KiCad → pnpslice → job file → pnpvision → Moonraker → Klipper → machine">
+              <div class="img-placeholder">Image placeholder: Diagram: KiCad → pnpslice → job file → pnpvision → Moonraker → Klipper → machine<br><code>images/home-pipeline.png</code></div>
+              <figcaption>From KiCad design to placed parts.</figcaption>
+            </figure>
+
+        <h2 id="current-status-v3">Current status (V3)</h2>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Subsystem</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>CoreXY motion, sensorless homing, nozzle rotation</td><td>Working</td></tr>
+            <tr><td>Status and camera lighting</td><td>Working</td></tr>
+            <tr><td>Cameras: streaming, lens calibration, undistorted views</td><td>Working</td></tr>
+            <tr><td>Vision calibration: motion maps, nozzle offset, datum, visual homing</td><td>Working on the prototype</td></tr>
+            <tr><td>Board alignment from copper pads (no fiducials needed)</td><td>Working on the test PCB</td></tr>
+            <tr><td>Pick, inspect and place with offset and rotation correction</td><td>Working in tests (0805 parts)</td></tr>
+            <tr><td>Slicer (KiCad → job file)</td><td>Working</td></tr>
+            <tr><td>Job runner and touchscreen launch</td><td>Prototype; tested partly against a simulator</td></tr>
+            <tr><td>Servo tape feeders</td><td>In progress</td></tr>
+            <tr><td>Pneumatics (compressor and valve)</td><td>In progress</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="versions-at-a-glance">Versions at a glance</h2>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Version</th><th>Date</th><th>Highlights</th></tr></thead>
+          <tbody>
+            <tr><td>V1</td><td>Fall 2025</td><td>Proof of concept: Ender 3 frame converted to basic XYZ motion, Marlin firmware.</td></tr>
+            <tr><td>V2</td><td>Spring 2026</td><td>Rotating vacuum toolhead, diaphragm pump, modular printed frame, Klipper firmware.</td></tr>
+            <tr><td>V3</td><td>Fall 2026</td><td>CoreXY motion, LumenPnP-style CP40 toolhead, up and down cameras, vision software, slicer, servo feeders.</td></tr>
+          </tbody>
+        </table></div>
+
+        <p>See <a href="history.html">History</a> for more on V1 and V2.</p>
+
+        <h2 id="where-to-start">Where to start</h2>
+
+        <ul>
+          <li><a href="hardware.html">Hardware</a>: what the machine is made of.</li>
+          <li><a href="build.html">Build Guide</a>: building one, in order.</li>
+          <li><a href="software.html">Software</a>: setting up the Raspberry Pi and Klipper.</li>
+          <li><a href="vision.html">Vision</a>: calibrating the machine and running a job.</li>
+        </ul>
+
+        <h2 id="links">Links</h2>
+
+        <ul>
+          <li><a href="https://github.com/OSHE-Github/OSHE-PnP">OSHE-PnP on GitHub</a>: CAD, software and configuration files</li>
+          <li><a href="https://docs.google.com/document/d/1zdPMhOE8R7Szz68Ky9EoDyxVyp7iftD7q8Uco1WKPY8/edit?usp=sharing">Master technical document (Google Doc)</a></li>
+          <li><a href="https://docs.google.com/spreadsheets/d/12Wk4rjcJYJA1_MIOu3757zk9U3lGuzmtH0hi1Tlr5gI/edit?usp=sharing">Bill of materials (Google Sheet)</a></li>
+          <li><a href="https://oshe.io/">Open Source Hardware Enterprise</a></li>
+        </ul>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

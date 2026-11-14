@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>About & Contributing | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html" aria-current="page">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>About &amp; Contributing</h1>
+
+        <figure class="img-slot" data-src="images/about-team.jpg" data-alt="Photo of the OSHE Pick and Place team with the machine">
+              <div class="img-placeholder">Image placeholder: Photo of the OSHE Pick and Place team with the machine<br><code>images/about-team.jpg</code></div>
+            </figure>
+
+        <h2 id="background">Background</h2>
+        <p>This project is run by students at Michigan Technological University as part of the
+        <a href="https://oshe.io/">Open Source Hardware Enterprise</a> (OSHE), under the guidance of
+        Dr. Oberloier. Michigan Tech's Enterprise program has student teams work on real projects over
+        several semesters; OSHE focuses on rapid prototyping and projects that can be completed in two
+        or three semesters.</p>
+        <p>The goal is a pick-and-place machine that students and hobbyists can afford and build
+        themselves, from readily available parts and with no specialized tools.</p>
+
+        <h2 id="team">Team</h2>
+        <ul>
+          <li>Donn B</li>
+          <li>Matthew C</li>
+          <li>Raymond N</li>
+          <li>Toby C</li>
+          <li>Joey P</li>
+          <li>Loyal S</li>
+        </ul>
+        <div class="note verify">⚠ Verify: team list is from the Spring 2026 (V2) documentation. Update for Fall 2026 and add full names if wanted.</div>
+
+        <h2 id="roadmap">Roadmap</h2>
+        <h3 id="in-progress-v3">In progress (V3)</h3>
+        <ul>
+          <li>Pneumatics: compressor and valve</li>
+          <li>Servo tape feeders on the Arduino Nano</li>
+          <li>First full job run from feeders, then speed tuning</li>
+          <li>Touchscreen job launching</li>
+          <li>V3 bill of materials, wiring diagram and step-by-step assembly guide</li>
+        </ul>
+        <h3 id="ideas-for-later">Ideas for later</h3>
+        <ul>
+          <li>More than one toolhead / nozzle</li>
+          <li>More reel space and support for larger reels</li>
+          <li>Front and back loading of reels</li>
+          <li>A soldering module</li>
+          <li>OpenPnP support (the project is currently separate from OpenPnP)</li>
+        </ul>
+
+        <h2 id="contributing">Contributing</h2>
+        <p>Everything is on <a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a>: CAD (STEP files
+        for current and past versions), Klipper configuration, pnpvision, pnpslice and the feeder
+        firmware. Feel free to modify any of it. The design currently centers on Ender 3 parts.</p>
+        <ul>
+          <li>Report problems or suggest changes with a GitHub issue.</li>
+          <li>Submit changes with a pull request to <code>OSHE-Github/OSHE-PnP</code>.</li>
+          <li>pnpslice and pnpvision have tests that run without hardware; please run them before submitting.</li>
+        </ul>
+
+        <h2 id="inspiration">Inspiration</h2>
+        <p>The project draws on other open-source pick-and-place work, especially
+        <a href="https://openpnp.org/">OpenPnP</a>, <a href="https://github.com/opulo-inc/lumenpnp">LumenPnP</a>,
+        <a href="https://github.com/sphawes/index">the Index</a>, and Mark Maker's work at
+        <a href="https://makr.zone/">makr.zone</a>.</p>
+
+        <h2 id="resources">Resources</h2>
+        <ul>
+          <li><a href="https://github.com/OSHE-Github/OSHE-PnP">OSHE-PnP GitHub repository</a></li>
+          <li><a href="https://oshe.io/">Open Source Hardware Enterprise</a></li>
+          <li><a href="https://www.klipper3d.org/">Klipper documentation</a></li>
+          <li><a href="https://docs.mainsail.xyz/">Mainsail documentation</a></li>
+          <li><a href="https://openpnp.org/">OpenPnP</a></li>
+          <li><a href="https://github.com/opulo-inc/lumenpnp">LumenPnP</a></li>
+          <li><a href="https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder">0816 feeder</a></li>
+          <li><a href="https://makr.zone/new-all-3d-printed-tapereel-feeder/399/">Mark Maker's PushPull feeder</a> (used in V2)</li>
+        </ul>
+
+        <h2 id="license">License</h2>
+        <p>The OSHE Pick and Place is released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a>. You may use,
+        study, change and share it; if you share a modified version, it must stay under the same license.
+        The legacy Marlin firmware is based on <a href="https://github.com/MarlinFirmware/Marlin">Marlin</a>
+        (GPL v3).</p>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

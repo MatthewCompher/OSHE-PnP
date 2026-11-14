@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>G-code Macros | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html" aria-current="page">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>G-code Macros</h1>
+
+        <p>Macros are custom commands defined in Klipper's config. Type them in the Mainsail console,
+        click them in Mainsail's macro panel, or tap them on the touchscreen. They live in
+        <code>Software/Klipper/printer.cfg</code> and <code>Software/Klipper/pnp_hmi.cfg</code>.</p>
+
+        <figure class="img-slot" data-src="images/macros-mainsail-panel.png" data-alt="Screenshot of the Mainsail macro buttons">
+              <div class="img-placeholder">Image placeholder: Screenshot of the Mainsail macro buttons<br><code>images/macros-mainsail-panel.png</code></div>
+            </figure>
+
+        <div class="note warn"><strong>Before you jog:</strong> Z = 0 is the top and a larger Z is lower.
+        The tallest fixtures on the plate are the reject bin (15 mm), the datum (11 mm) and the PCB
+        clamps (8–10 mm). When jogging X/Y by hand, keep the nozzle at <strong>Z 30 or higher (a smaller
+        number)</strong>.</div>
+
+        <h2 id="quick-reference">Quick reference</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Macro</th><th>What it does</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><th colspan="3">Homing</th></tr>
+            <tr><td><code>G28</code> [<code>X</code>] [<code>Y</code>] [<code>Z</code>] [<code>R</code>]</td><td>Homes the machine (see <a href="#homing">Homing</a>)</td><td>Working</td></tr>
+            <tr><td><code>VISION_HOME</code> [<code>NO_G28=1</code>]</td><td>Homes X/Y, then re-zeros X/Y precisely on datum dot 0 using the down camera</td><td>Working</td></tr>
+
+            <tr><th colspan="3">Running jobs (pnp_hmi.cfg)</th></tr>
+            <tr><td><code>RUN_JOB JOB=&lt;name&gt;</code> [<code>ALIGN=1</code>] [<code>NO_FEEDERS=1</code>]</td><td>Starts a pnpvision job in the background</td><td>Prototype</td></tr>
+            <tr><td><code>PNP_ANSWER VALUE=1|0</code></td><td>Answers the open job dialog (1 = continue/yes, 0 = stop/no)</td><td>Prototype</td></tr>
+            <tr><td><code>PNP_CONTINUE</code></td><td>Same as the dialog's Continue button</td><td>Prototype</td></tr>
+            <tr><td><code>PNP_STOP</code></td><td>Stops the job cleanly before the next part</td><td>Prototype</td></tr>
+
+            <tr><th colspan="3">Lights</th></tr>
+            <tr><td><code>VISION_LIGHT_ON</code> / <code>_OFF</code> / <code>_TOGGLE</code></td><td>Down-camera light (LEDs 2–3). On at boot.</td><td>Working</td></tr>
+            <tr><td><code>UP_LIGHT_ON</code> [<code>LEVEL=0..1</code>] / <code>UP_LIGHT_OFF</code></td><td>Up-camera ring light</td><td>Working</td></tr>
+            <tr><td><code>LEDS_IDLE</code> / <code>LEDS_BUSY</code> / <code>LEDS_ERROR</code> / <code>LEDS_RAINBOW</code> / <code>LEDS_OFF</code></td><td>Status LED (LED 1): white breathing, blue pulse, red blink, color cycle, off</td><td>Working</td></tr>
+
+            <tr><th colspan="3">Pneumatics</th></tr>
+            <tr><td><code>VALVE_ON</code> / <code>VALVE_OFF</code> / <code>TOGGLE_VALVE</code></td><td>Solenoid valve (FAN1, PD12)</td><td>Pin works; pneumatics unfinished</td></tr>
+            <tr><td><code>MOTOR_RELAY_ON</code> / <code>MOTOR_RELAY_OFF</code></td><td>Pulses the relay on PE8 for 1 second</td><td>Test only</td></tr>
+
+            <tr><th colspan="3">Feeder (Klipper servo)</th></tr>
+            <tr><td><code>FEED</code> [<code>COUNT=n</code>]</td><td>Strokes the servo <code>feeder1</code> n times</td><td>Uncalibrated</td></tr>
+            <tr><td><code>FEEDER_SET ANGLE=0..180</code></td><td>Moves the servo to an angle</td><td>Uncalibrated</td></tr>
+
+            <tr><th colspan="3">Testing</th></tr>
+            <tr><td><code>TEST_BED_MOVEMENT</code> [<code>LOOPS=n</code>]</td><td>Corners, diagonals and Z up/down, then returns to center</td><td>Working</td></tr>
+            <tr><td><code>PNP_DEMO</code> [<code>LOOPS=n</code>]</td><td>Simulated pick/place motion (no vacuum), mostly slow with fast bursts. Default 50 loops.</td><td>Working</td></tr>
+
+            <tr><th colspan="3">Legacy (do not run)</th></tr>
+            <tr><td><code>PICK</code>, <code>PLACE</code>, <code>CYCLE</code></td><td>V2-era macros kept for reference</td><td>Broken on V3</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="homing">Homing</h2>
+        <p><code>G28</code> is replaced by a <code>[homing_override]</code>. Plain <code>G28</code> homes
+        everything; <code>G28 X</code>, <code>G28 Y</code>, <code>G28 Z</code> or <code>G28 R</code> home only
+        those axes. The order is:</p>
+        <ol>
+          <li><strong>Z</strong> first, then moves to Z 5 (near the top) for clearance.</li>
+          <li>Sets X and Y motor current for homing. On a CoreXY both motors move for either axis, so both are set.</li>
+          <li><strong>Y</strong>, then backs off to Y 10.</li>
+          <li><strong>X</strong>, then backs off to X 10.</li>
+          <li>Restores the normal motor current.</li>
+          <li><strong>R</strong> (nozzle rotation): there's no endstop, so the motor is locked and the
+            current angle becomes 0.</li>
+        </ol>
+        <p>Homing is sensorless (stall detection on the TMC5160 drivers). Lower homing current makes
+        stall detection <em>more</em> sensitive. If homing stops early in mid-air, raise the current back
+        toward 1.0 or raise <code>driver_SGT</code> by 1.</p>
+
+        <h3 id="vision-home">VISION_HOME</h3>
+        <p>Sensorless X/Y homing can land up to about 2 mm off. <code>VISION_HOME</code> fixes that:
+        it runs <code>G28 X Y</code>, centers the down camera on datum dot 0, and sets the position to
+        the taught coordinates. Use it instead of plain <code>G28</code> before any vision work.
+        <code>NO_G28=1</code> re-references on the dot without homing first.</p>
+        <p>It runs pnpvision in the background through a <code>gcode_shell_command</code>. Wait for its
+        result line in the console before moving the machine. Log:
+        <code>Software/pnpvision/results/vision_home_macro.log</code>. Setup steps are on the
+        <a href="vision.html">Vision</a> page.</p>
+
+        <h2 id="running-jobs-from-the-touchscreen">Running jobs from the touchscreen</h2>
+        <p><code>pnp_hmi.cfg</code> lets you run pnpvision jobs from Mainsail or the touchscreen without a
+        laptop. Install it by copying it next to <code>printer.cfg</code> and adding
+        <code>[include pnp_hmi.cfg]</code>.</p>
+        <ul>
+          <li><code>RUN_JOB JOB=Test_PCB-top</code>: the job name with spaces replaced by <code>_</code>.
+            <code>ALIGN=1</code> aligns the board first (put the down camera on alignment pad A first).
+            <code>NO_FEEDERS=1</code> means you put a part in the pocket by hand when asked.</li>
+          <li>Or pick a <code>PNP_&lt;job&gt;.gcode</code> launcher from the print list. The
+            <code>pnpvision make-launchers</code> command creates these.</li>
+          <li>Questions appear as dialogs with Continue / Stop buttons.</li>
+          <li>The emergency stop still works and also ends the job.</li>
+          <li>Log: <code>Software/pnpvision/results/run_job_macro.log</code>.</li>
+        </ul>
+        <figure class="img-slot" data-src="images/macros-klipperscreen-dialog.jpg" data-alt="KlipperScreen showing a pnpvision job dialog with Continue and Stop buttons">
+              <div class="img-placeholder">Image placeholder: KlipperScreen showing a pnpvision job dialog with Continue and Stop buttons<br><code>images/macros-klipperscreen-dialog.jpg</code></div>
+            </figure>
+
+        <h2 id="lights">Lights</h2>
+        <p>Three LEDs on the toolhead: LED 1 shows status, LEDs 2–3 light the area under the down camera
+        (solid white, on at boot). The up camera has a separate 6-LED ring. The LED effects need the
+        <code>klipper-led_effect</code> extension.</p>
+
+        <h2 id="feeder-servo">Feeder servo</h2>
+        <p><code>FEED</code> moves the servo to a retract angle (20°), then an advance angle (160°), waiting
+        250 ms at each, then returns to rest (90°). These values are variables at the top of the macro.
+        The servo's pulse limits are safe placeholders until it's calibrated.</p>
+        <div class="note">For real jobs the feeders are driven by the Arduino Nano through pnpvision, not
+        by this macro. See <a href="vision.html#feeders">Vision → Feeders</a>.</div>
+
+        <h2 id="legacy-macros-pick-place-cycle">Legacy macros: PICK, PLACE, CYCLE</h2>
+        <div class="note warn"><strong>Don't run these on V3.</strong> They were written for V2. <code>PICK</code>
+        uses a safe height of Z 80, which is outside V3's Z range of 0–60 and assumes the old Z direction.
+        <code>PLACE</code> refers to an undefined <code>default_z_place</code>. <code>CYCLE</code> uses a stepper
+        and pin that don't exist on V3. Picking and placing are now done by pnpvision.</div>
+
+        <h2 id="adding-your-own-macros">Adding your own macros</h2>
+        <p>Add a <code>[gcode_macro NAME]</code> section to <code>printer.cfg</code> with a
+        <code>description:</code> and a <code>gcode:</code> block, then Save &amp; Restart. Always start
+        motion with <code>G90</code> (absolute moves) and lift to a safe Z before X/Y moves. See the
+        <a href="https://www.klipper3d.org/Command_Templates.html">Klipper command templates</a> documentation.</p>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

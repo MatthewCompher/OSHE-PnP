@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>V3 Hardware | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html" aria-current="page">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>V3 Hardware</h1>
+
+        <figure class="img-slot" data-src="images/hw-v3-render.png" data-alt="Full CAD render of the V3 machine">
+              <div class="img-placeholder">Image placeholder: Full CAD render of the V3 machine<br><code>images/hw-v3-render.png</code></div>
+              <figcaption>V3 full assembly (CAD/V3-Active/PnP_Full_Assembly_V3.step).</figcaption>
+            </figure>
+
+        <p>V3 is a complete rework of the motion system and toolhead. It keeps the original idea:
+        start from an Ender 3, reuse its extrusion, motors and hardware, and 3D print the rest. A
+        scrap or non-working Ender 3 can save about $100 in parts, but you don't need one. Exact
+        extrusion and belt lengths are not critical, as long as the proportions stay consistent.</p>
+
+        <h2 id="specifications">Specifications</h2>
+
+        <div class="table-wrap"><table>
+          <tbody>
+            <tr><th>Motion system</th><td>CoreXY (inspired by the Voron 2.3)</td></tr>
+            <tr><th>Travel</th><td>X 0–235 mm, Y 0–343 mm, Z 0–60 mm</td></tr>
+            <tr><th>Max speed / acceleration</th><td>600 mm/s, 7500 mm/s² (Klipper limits; real jobs run slower)</td></tr>
+            <tr><th>Homing</th><td>Sensorless (TMC5160 stall detection) on X, Y and Z, refined by camera ("visual homing")</td></tr>
+            <tr><th>Repeatability</th><td>About 0.01 mm measured with the down camera (sensorless homing alone: 0.1–2 mm)</td></tr>
+            <tr><th>Toolhead</th><td>One nozzle, Samsung CP40 tips, rotation by NEMA 11 stepper</td></tr>
+            <tr><th>Cameras</th><td>Down camera on the gantry, up camera under the staging plate</td></tr>
+            <tr><th>Parts tested</th><td>0805 chip resistors (0201–1206 and SOIC-8 are in the parts table)</td></tr>
+            <tr><th>Machine footprint</th><td>TBD</td></tr>
+            <tr><th>Max PCB size</th><td>TBD</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="note verify">⚠ Verify: the machine footprint and max PCB size for V3 have not been
+        published yet (the repo README still shows "xxxx").</div>
+
+        <div class="note warn"><strong>Z runs "upside down" on this machine.</strong> Z = 0 is homed at
+        the top, and a <em>larger</em> Z moves the nozzle <em>lower</em>. The nozzle touches the staging
+        plate at about Z 50 and the top of a PCB at about Z 38.</div>
+
+        <h2 id="subsystems">Subsystems</h2>
+
+        <h3 id="frame">Frame</h3>
+        <figure class="img-slot" data-src="images/hw-frame.jpg" data-alt="V3 frame: printed legs and 4040 extrusion">
+              <div class="img-placeholder">Image placeholder: V3 frame: printed legs and 4040 extrusion<br><code>images/hw-frame.jpg</code></div>
+            </figure>
+        <p>The frame uses the Ender 3's aluminum extrusion with printed legs (bottom, middle and spacer
+        pieces, in A and B mirror versions) and printed 4040 spacers. Parts are in
+        <code>CAD/V3-Active/Framing</code>.</p>
+
+        <h3 id="corexy-motion">CoreXY motion</h3>
+        <figure class="img-slot" data-src="images/hw-corexy.jpg" data-alt="CoreXY belt path with motor and idler corners">
+              <div class="img-placeholder">Image placeholder: CoreXY belt path with motor and idler corners<br><code>images/hw-corexy.jpg</code></div>
+            </figure>
+        <p>Two stepper motors share the X and Y work through a crossed belt path. Each corner has a
+        printed motor mount or idler mount with a belt tensioner (A and B versions). The X-axis uses
+        upper and lower carriage pieces and a rail spacer. Parts are in
+        <code>CAD/V3-Active/Framing/TOP motor A|B</code>, <code>TOP idler A|B</code> and
+        <code>CAD/V3-Active/X-Axis</code>.</p>
+
+        <h3 id="toolhead">Toolhead</h3>
+        <figure class="img-slot" data-src="images/hw-toolhead.jpg" data-alt="V3 toolhead: CP40 nozzle holder, NEMA 11 rotation motor and down camera">
+              <div class="img-placeholder">Image placeholder: V3 toolhead: CP40 nozzle holder, NEMA 11 rotation motor and down camera<br><code>images/hw-toolhead.jpg</code></div>
+            </figure>
+        <p>The V3 toolhead is based on the LumenPnP design. It uses Samsung CP40 nozzle tips and a
+        NEMA 11 stepper to rotate the nozzle. The rotation axis has no endstop: homing sets the current
+        angle to 0. The down camera rides on the same carriage, about 8 mm (X) and 53 mm (Y) from the
+        nozzle.</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tip</th><th>Approx. size</th><th>Used for</th></tr></thead>
+          <tbody>
+            <tr><td>N045</td><td>0.45 mm</td><td>0201</td></tr>
+            <tr><td>N08</td><td>0.8 mm</td><td>0402, 0603, 0805 (current default)</td></tr>
+            <tr><td>N14</td><td>1.4 mm</td><td>1206</td></tr>
+            <tr><td>N24</td><td>2.4 mm</td><td>SOIC-8</td></tr>
+            <tr><td>N400, N750</td><td>4.0, 7.5 mm</td><td>Larger parts</td></tr>
+          </tbody>
+        </table></div>
+        <div class="note verify">⚠ Verify: the CAD README lists a <code>/Toolhead</code> folder for V3, but
+        it isn't in the repository yet.</div>
+
+        <h3 id="staging-plate">Staging plate</h3>
+        <figure class="img-slot" data-src="images/hw-staging-plate.jpg" data-alt="Staging plate with PCB mounts, camera datum and reject bin">
+              <div class="img-placeholder">Image placeholder: Staging plate with PCB mounts, camera datum and reject bin<br><code>images/hw-staging-plate.jpg</code></div>
+            </figure>
+        <p>The staging plate holds the board and the calibration fixtures. It is built from printed
+        tiles: regular tiles plus one tile with an opening for the up camera. It sits on brackets and
+        spacers. On top are:</p>
+        <ul>
+          <li><strong>PCB mounts</strong>: one static and one adjustable (dynamic) mount hold the board (8–10 mm tall).</li>
+          <li><strong>Camera datum</strong>: a printed 4 mm grid with white dots. The cameras use it as a
+            fixed reference, and datum dot 0 is the visual homing point (11 mm tall). There is a
+            multi-color <code>.3mf</code> version and a "NO AMS" version printed as separate parts.</li>
+          <li><strong>Reject bin</strong>: where parts that fail inspection are dropped (15 mm tall).</li>
+        </ul>
+        <p>Parts are in <code>CAD/V3-Active/Staging</code>.</p>
+
+        <h3 id="cameras-and-lighting">Cameras and lighting</h3>
+        <figure class="img-slot" data-src="images/hw-cameras.jpg" data-alt="Down camera on the toolhead and up camera with its ring light">
+              <div class="img-placeholder">Image placeholder: Down camera on the toolhead and up camera with its ring light<br><code>images/hw-cameras.jpg</code></div>
+            </figure>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Camera</th><th>Hardware</th><th>Resolution</th><th>Light</th></tr></thead>
+          <tbody>
+            <tr><td>Down (on the gantry)</td><td>Arducam 12MP USB, M12 lens, about 11.5 mm from the work (~59 px/mm)</td><td>1920×1080</td><td>2 white LEDs on the toolhead LED chain</td></tr>
+            <tr><td>Up (under the staging plate)</td><td>InnoMaker 720P, 120° lens</td><td>1280×720</td><td>Ring of 6 WS2812 LEDs</td></tr>
+          </tbody>
+        </table></div>
+        <p>The down camera finds the datum, the board and placed parts. The up camera looks at the part
+        on the nozzle so its offset and angle can be corrected before placing.</p>
+
+        <h3 id="feeders">Feeders</h3>
+        <figure class="img-slot" data-src="images/hw-feeder.jpg" data-alt="Modified 0816 low-profile tape feeder with servo">
+              <div class="img-placeholder">Image placeholder: Modified 0816 low-profile tape feeder with servo<br><code>images/hw-feeder.jpg</code></div>
+            </figure>
+        <p>V3 uses a modified version of Mark Maker's 0816 low-profile tape feeder, adapted to standard
+        fasteners. Each feeder has a micro servo: one stroke (0° → 90° → 0°, about 2 s) advances the tape
+        by one part. An Arduino Nano runs the servos one at a time so they never draw current together.
+        Parts are in <code>CAD/V3-Active/Feeder</code> (left end, right end, rib).</p>
+
+        <h3 id="pneumatics">Pneumatics</h3>
+        <figure class="img-slot" data-src="images/hw-pneumatics.jpg" data-alt="Air compressor, valve and tubing">
+              <div class="img-placeholder">Image placeholder: Air compressor, valve and tubing<br><code>images/hw-pneumatics.jpg</code></div>
+            </figure>
+        <p>V3 uses an air compressor (V2 used a diaphragm vacuum pump) and a solenoid valve switched by
+        the controller board.</p>
+        <div class="note verify">⚠ Verify: compressor model, valve, tubing and how vacuum is generated
+        are not documented yet. Pneumatics are still being finished.</div>
+
+        <h3 id="touchscreen-hmi">Touchscreen (HMI)</h3>
+        <figure class="img-slot" data-src="images/hw-hmi.jpg" data-alt="Touchscreen on its printed arm mount">
+              <div class="img-placeholder">Image placeholder: Touchscreen on its printed arm mount<br><code>images/hw-hmi.jpg</code></div>
+            </figure>
+        <p>A touchscreen on a printed arm (<code>CAD/V3-Active/Electrical/HMI</code>) runs
+        KlipperScreen, so jobs can be started without a laptop. The project moved to a Raspberry Pi 4
+        for compatibility with this screen.</p>
+
+        <h3 id="electronics">Electronics</h3>
+        <p>See <a href="electronics.html">Electronics &amp; Safety</a>.</p>
+
+        <h2 id="cad-files">CAD files</h2>
+        <p>Everything is in <a href="https://github.com/OSHE-Github/OSHE-PnP/tree/main/CAD"><code>CAD/</code></a>
+        as STEP (and some STL/3MF). The master file is <code>CAD/V3-Active/PnP_Full_Assembly_V3.step</code>.
+        The models were made in Fusion 360, SolidWorks and Onshape. <code>Ender 3 Full Assembly.step</code>
+        is included as a reference.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>Folder</th><th>Contents</th></tr></thead>
+          <tbody>
+            <tr><td><code>V3-Active/Framing</code></td><td>Frame legs (bottom A/B, middle, spacer), 4040 spacers, CoreXY motor and idler corners with tensioners</td></tr>
+            <tr><td><code>V3-Active/X-Axis</code></td><td>Upper and lower X carriage parts (A/B), rail spacer</td></tr>
+            <tr><td><code>V3-Active/Staging</code></td><td>Plate tiles and spacers, plate brackets, PCB mounts, camera datum</td></tr>
+            <tr><td><code>V3-Active/Feeder</code></td><td>0816 feeder ends and rib</td></tr>
+            <tr><td><code>V3-Active/Electrical</code></td><td>HMI frame, arm and end mount</td></tr>
+            <tr><td><code>V2-Legacy</code>, <code>V1-Legacy</code></td><td>Earlier versions (see <a href="history.html">History</a>)</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="3d-printing">3D printing</h2>
+        <ul>
+          <li><strong>Material:</strong> PETG preferred for structural parts and motor mounts; PLA is fine for enclosures and lighter parts.</li>
+          <li><strong>Settings:</strong> 0.2 mm layers, 2+ perimeters, 12% gyroid infill, tree supports, 0.4 mm nozzle.</li>
+          <li><strong>Tested on:</strong> Bambu Lab A1, Prusa CORE One and Voron 2.4.</li>
+        </ul>
+
+        <h2 id="bill-of-materials">Bill of materials</h2>
+        <div class="note verify">⚠ Verify: a V3 bill of materials isn't in the repo yet
+        (<code>BOMs/</code> has V1/V2 lists only). See the
+        <a href="https://docs.google.com/spreadsheets/d/12Wk4rjcJYJA1_MIOu3757zk9U3lGuzmtH0hi1Tlr5gI/edit?usp=sharing">BOM spreadsheet</a>
+        for the latest.</div>
+
+        <h2 id="credits">Credits</h2>
+        <ul>
+          <li>Toolhead based on <a href="https://github.com/opulo-inc/lumenpnp">LumenPnP</a> by Opulo.</li>
+          <li>CoreXY layout inspired by the <a href="https://vorondesign.com/">Voron</a> 2.3.</li>
+          <li>Feeder based on the <a href="https://makerworld.com/en/models/778189-0816-low-profile-worm-gear-feeder-pick-and-place">0816 low-profile worm gear feeder</a>,
+            from the original <a href="https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder">0816 feeder</a>.</li>
+        </ul>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

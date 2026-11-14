@@ -1,0 +1,458 @@
+/* ==========================================================================
+   OSHE Pick and Place documentation
+   Michigan Tech black and gold. Follows the reader's light/dark setting.
+   No build step, no fonts to download.
+
+   Contents
+     1. Colors (light, then dark)
+     2. Base
+     3. Header
+     4. Layout and sidebar
+     5. Content: headings, text, links, code
+     6. Tables
+     7. Callouts (note / warn / verify)
+     8. Figures and image placeholders
+     9. Footer
+    10. Mobile
+    11. Print
+   ========================================================================== */
+
+/* 1. Colors ---------------------------------------------------------------- */
+
+:root {
+  /* Michigan Tech brand */
+  --gold: #ffcd00;
+  --black: #000000;
+
+  /* Fixed chrome (same in both modes) */
+  --header-bg: var(--black);
+  --header-text: #ffffff;
+  --nav-bg: #161616;
+  --nav-text: #d6d6d6;
+  --nav-muted: #8f8f8f;
+  --nav-hover: #262626;
+
+  /* Page (light) */
+  --bg: #ffffff;
+  --surface: #f6f5f1;
+  --text: #1c1c1c;
+  --muted: #5c5c5c;
+  --border: #dedbd2;
+  --link: #7a5a00;          /* dark gold: readable on white */
+  --link-hover: #000000;
+  --code-bg: #f3f1ea;
+  --code-text: #3a2f00;
+
+  --note-bg: #f1f7f1;   --note-border: #3e8e41;
+  --warn-bg: #fdf1f0;   --warn-border: #c62828;
+  --verify-bg: #fff8d6; --verify-border: var(--gold);
+
+  --ph-bg: #efede6;
+  --ph-border: #a8a395;
+  --ph-text: #5c5c5c;
+
+  --header-h: 3.5rem;
+  --nav-w: 15rem;
+  --content-w: 52rem;
+  --radius: 4px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nav-bg: #0d0d0d;
+    --nav-hover: #1f1f1f;
+
+    --bg: #121212;
+    --surface: #1b1b1b;
+    --text: #e9e7e1;
+    --muted: #a9a59b;
+    --border: #333230;
+    --link: var(--gold);
+    --link-hover: #ffe170;
+    --code-bg: #1f1e1b;
+    --code-text: #ffe28a;
+
+    --note-bg: #142016;   --note-border: #5cb860;
+    --warn-bg: #2a1514;   --warn-border: #ef5350;
+    --verify-bg: #2a2410; --verify-border: var(--gold);
+
+    --ph-bg: #1e1e1c;
+    --ph-border: #5a574f;
+    --ph-text: #a9a59b;
+  }
+}
+
+/* 2. Base ------------------------------------------------------------------ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-padding-top: calc(var(--header-h) + 1rem); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-text-size-adjust: 100%;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0.5rem;
+  z-index: 100;
+  background: var(--gold);
+  color: var(--black);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+.skip-link:focus { left: 0.5rem; }
+
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* 3. Header ---------------------------------------------------------------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  background: var(--header-bg);
+  color: var(--header-text);
+  border-bottom: 4px solid var(--gold);
+}
+
+.site-title {
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.site-title span { color: var(--header-text); font-weight: 600; }
+.site-title:hover { color: var(--gold); }
+
+.site-tagline {
+  color: var(--nav-muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-toggle {
+  display: none;               /* shown on small screens */
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--header-text);
+  border: 1px solid #444;
+  border-radius: var(--radius);
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.nav-toggle:hover { border-color: var(--gold); }
+
+/* three-bar icon drawn with borders */
+.nav-toggle-icon,
+.nav-toggle-icon::before,
+.nav-toggle-icon::after {
+  display: block;
+  width: 1.1rem;
+  height: 2px;
+  background: var(--gold);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.nav-toggle-icon { position: relative; }
+.nav-toggle-icon::before,
+.nav-toggle-icon::after { content: ""; position: absolute; left: 0; }
+.nav-toggle-icon::before { top: -6px; }
+.nav-toggle-icon::after { top: 6px; }
+
+.nav-open .nav-toggle-icon { background: transparent; }
+.nav-open .nav-toggle-icon::before { transform: translateY(6px) rotate(45deg); }
+.nav-open .nav-toggle-icon::after { transform: translateY(-6px) rotate(-45deg); }
+
+/* 4. Layout and sidebar ---------------------------------------------------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr);
+  min-height: calc(100vh - var(--header-h));
+}
+
+.site-nav {
+  position: sticky;
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  background: var(--nav-bg);
+  padding: 1rem 0 2rem;
+}
+
+.nav-group {
+  margin: 1.25rem 1.25rem 0.35rem;
+  color: var(--gold);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nav-group:first-child { margin-top: 0.25rem; }
+
+.site-nav ul { list-style: none; margin: 0; padding: 0; }
+
+.site-nav a {
+  display: block;
+  padding: 0.4rem 1.25rem;
+  color: var(--nav-text);
+  text-decoration: none;
+  border-left: 4px solid transparent;
+  font-size: 0.95rem;
+}
+.site-nav a:hover { background: var(--nav-hover); color: #ffffff; }
+.site-nav a[aria-current="page"] {
+  border-left-color: var(--gold);
+  background: var(--nav-hover);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.content-col { min-width: 0; display: flex; flex-direction: column; }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: var(--content-w);
+  padding: 2rem 2.5rem 3rem;
+}
+
+/* 5. Content --------------------------------------------------------------- */
+
+h1, h2, h3 { line-height: 1.25; color: var(--text); }
+
+h1 {
+  font-size: 2.1rem;
+  margin: 0 0 1.25rem;
+  padding-left: 0.75rem;
+  border-left: 6px solid var(--gold);
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin: 2.5rem 0 0.75rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 2px solid var(--border);
+}
+
+h3 { font-size: 1.15rem; margin: 1.75rem 0 0.5rem; }
+
+p, ul, ol { margin: 0 0 1rem; }
+li { margin: 0.2rem 0; }
+li > ul, li > ol, li > pre, li > .table-wrap { margin-top: 0.5rem; }
+
+a { color: var(--link); text-underline-offset: 0.15em; }
+a:hover { color: var(--link-hover); }
+
+strong { font-weight: 650; }
+
+code, kbd, pre { font-family: var(--mono); font-size: 0.88em; }
+
+code {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
+  border-radius: 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+pre code { background: none; padding: 0; color: var(--text); overflow-wrap: normal; }
+
+kbd {
+  display: inline-block;
+  padding: 0.05em 0.4em;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 0.82em;
+}
+
+/* 6. Tables ---------------------------------------------------------------- */
+
+.table-wrap { overflow-x: auto; margin: 0 0 1.25rem; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.93rem;
+}
+
+th, td {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  background: var(--black);
+  color: var(--gold);
+  border-color: var(--black);
+  font-weight: 600;
+}
+
+tbody th {                 /* row headers: spec tables, group rows */
+  background: var(--surface);
+  font-weight: 600;
+}
+tbody th[colspan] {
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+tbody tr:nth-child(even) td { background: var(--surface); }
+
+/* 7. Callouts -------------------------------------------------------------- */
+
+.note {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--note-bg);
+  border-left: 5px solid var(--note-border);
+}
+.note.warn   { background: var(--warn-bg);   border-left-color: var(--warn-border); }
+.note.verify { background: var(--verify-bg);  border-left-color: var(--verify-border); }
+.note > :last-child { margin-bottom: 0; }
+
+/* 8. Figures and image placeholders ---------------------------------------- */
+
+figure { margin: 1.5rem 0; }
+
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+}
+
+figcaption {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.img-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 11rem;
+  padding: 1.5rem 1rem;
+  background: var(--ph-bg);
+  border: 2px dashed var(--ph-border);
+  color: var(--ph-text);
+  text-align: center;
+  font-size: 0.92rem;
+}
+.img-placeholder code { background: transparent; color: var(--ph-text); }
+
+/* 9. Footer ---------------------------------------------------------------- */
+
+.site-footer {
+  max-width: var(--content-w);
+  padding: 1.25rem 2.5rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.site-footer p { margin: 0 0 0.4rem; }
+
+/* 10. Mobile --------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .nav-toggle { display: inline-flex; }
+  .site-tagline { display: none; }
+  .site-header { padding: 0 0.85rem; gap: 0.75rem; }
+
+  .layout { display: block; }
+
+  .site-nav {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    z-index: 15;
+    width: min(18rem, 85vw);
+    height: auto;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.35);
+  }
+  .nav-open .site-nav { transform: none; visibility: visible; }
+
+  /* dim the page behind the open menu */
+  .nav-open .content-col::before {
+    content: "";
+    position: fixed;
+    inset: var(--header-h) 0 0 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.45);
+  }
+  .nav-open { overflow: hidden; }
+
+  /* Give each column a sensible minimum so wide tables scroll sideways
+     (inside .table-wrap) instead of squeezing text into slivers. */
+  table { font-size: 0.88rem; }
+  th, td { min-width: 7.5rem; }
+
+  main { padding: 1.5rem 1.1rem 2.5rem; }
+  .site-footer { padding: 1.25rem 1.1rem 2rem; }
+  h1 { font-size: 1.7rem; }
+  h2 { font-size: 1.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-nav, .nav-toggle-icon, .nav-toggle-icon::before, .nav-toggle-icon::after { transition: none; }
+}
+
+/* 11. Print ---------------------------------------------------------------- */
+
+@media print {
+  .site-header, .site-nav, .skip-link, .nav-toggle { display: none; }
+  .layout { display: block; }
+  body { background: #fff; color: #000; }
+  main, .site-footer { max-width: none; padding: 0; }
+  a { color: #000; }
+  pre, code { background: #f4f4f4; color: #000; }
+  thead th { background: #000; color: #fff; }
+  .img-placeholder { min-height: 4rem; }
+}
