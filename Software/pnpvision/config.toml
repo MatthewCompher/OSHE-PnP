@@ -69,6 +69,12 @@ symmetry_deg = 180.0            # 180 = a part looks the same turned 180 deg (re
 # 2026-11-11 with inspect-up: motor 0 -> 30 -> 60 gave part 95.3 -> 66.1 -> 36.6 deg.
 direction = -1.0
 
+[run]
+# run-job Z speeds in mm/min (larger Z = lower). Keep all <= 3000 (printer.cfg max_z_velocity 50
+# mm/s). Leave a key out to use the default in runner.py. Old values, before 2026-11-14:
+# approach 300, touch 60, release_lift 60, lift 600, inspect 300.
+z_feeds = { approach = 1800, touch = 300, release_lift = 120, lift = 2400, inspect = 1800 }
+
 [log]
 db = "pnp_events.sqlite"
 

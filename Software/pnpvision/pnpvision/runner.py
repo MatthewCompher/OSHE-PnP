@@ -30,6 +30,17 @@ from .rotation import rotate_xy, shortest_turn
 
 PHASES = ("tip", "feed_wait", "pick", "inspect", "turn", "place", "verify", "reject")
 
+# Z feedrates (mm/min) for the runner's moves; override with config.toml [run] z_feeds.
+# Must stay under printer.cfg max_z_velocity (50 mm/s = F3000). The nozzle is spring-loaded,
+# which is what lets the final touch be 5 mm/s instead of 1.
+Z_FEEDS = {
+    "approach": 1800,    # down to approach_mm above the part / board (30 mm/s)
+    "touch": 300,        # the last approach_mm onto the part / board (5 mm/s)
+    "release_lift": 120, # first 0.5 mm up after letting go of a part (2 mm/s)
+    "lift": 2400,        # back up to safe travel Z (40 mm/s)
+    "inspect": 1800,     # down to the up camera's focus height (30 mm/s)
+}
+
 
 class JobError(RuntimeError):
     pass
@@ -100,12 +111,13 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             current_tip=None, recentre=None, reject_xy=None, ask=input, say=print, log=None,
             pick_press=0.4, place_press=0.3, approach_mm=0.8, vac_ms=300, release_ms=500,
             retries=3, angle_tol_deg=1.0, verify_empty=True, clock=time.monotonic, stats=None,
-            stop_requested=None):
+            stop_requested=None, z_feeds=None):
     """Returns a list of per-placement result dicts. ms: machine state (down_cam_offset_mm,
     up_cam_xy_mm; recentre(tip) may update them in place). up_inspect(body_mm) -> UpCam result.
     stats: a dict, filled with timing_summary(). stop_requested(): checked before each part
     (the HMI stop button); True = stop cleanly there."""
     log = log or (lambda event, ok=None, **d: None)
+    zf = {**Z_FEEDS, **(z_feeds or {})}
     steps, problems = plan_job(job, feeders, tips, packages, only)
     if problems:
         raise JobError("job can't run:\n  " + "\n  ".join(problems))
@@ -145,22 +157,22 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             rec["t"][name] = rec["t"].get(name, 0.0) + (clock() - t0) - (waited[0] - w0)
 
     def lower_and(valve, z, wait_ms, slow_lift=False):
-        mr.move_abs(z=z - approach_mm, feedrate=300)
-        mr.move_abs(z=z, feedrate=60)
+        mr.move_abs(z=z - approach_mm, feedrate=zf["approach"])
+        mr.move_abs(z=z, feedrate=zf["touch"])
         mr.gcode(f"{valve}\nG4 P{int(wait_ms)}")
         if slow_lift:
-            mr.move_abs(z=z - 0.5, feedrate=60)
-        mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            mr.move_abs(z=z - 0.5, feedrate=zf["release_lift"])
+        mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
 
     def look_up(tip, body):
         up = np.asarray(ms["up_cam_xy_mm"], float)
         mr.move_abs(x=float(up[0]), y=float(up[1]))
-        mr.move_abs(z=tips[tip]["inspect_z"], feedrate=300)
+        mr.move_abs(z=tips[tip]["inspect_z"], feedrate=zf["inspect"])
         return up_inspect(body)
 
     def reject(rec, why):
         with timed(rec, "reject"):
-            mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
             if reject_xy is not None:
                 mr.move_abs(x=float(reject_xy[0]), y=float(reject_xy[1]))
                 mr.gcode(f"VALVE_OFF\nG4 P{int(release_ms)}")
@@ -185,7 +197,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             say(f"\n[{n}/{len(steps)}] {p['ref']} {p.get('value', '')} ({p['package']}) from {fd.id}, tip {tip}")
             if tip != current_tip:
                 with timed(rec, "tip"):
-                    mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+                    mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                     user_ask(f"Fit nozzle tip {tip} (now: {current_tip or 'unknown'}), then press Enter... ")
                     if recentre is not None:
                         say(f"  re-centring tip {tip} over the up camera: {recentre(tip)}")
@@ -206,7 +218,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                 if "offset_mm" not in ins:
                     say(f"  pick {attempt}: nozzle empty ({ins.get('reason')})")
                     with timed(rec, "pick"):
-                        mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+                        mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                         mr.gcode("VALVE_OFF")
                     log("pick", ok=False, ref=p["ref"], feeder=fd.id, attempt=attempt)
                     ins = None
@@ -222,7 +234,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                 break
             if ins is None:
                 rec["status"] = f"no good part after {retries} picks"
-                mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+                mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                 a = user_ask(f"  {p['ref']}: feeder {fd.id} gave no good part {retries} times. Fix it and "
                              f"press Enter to go on with the next part, or type q to stop: ")
                 if str(a).strip().lower() == "q":
@@ -274,7 +286,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             nz = b + off - u
             place_z = tips[tip]["board_touch_z"] - p["height_mm"] + place_press
             with timed(rec, "place"):
-                mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+                mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                 mr.move_abs(x=float(nz[0]), y=float(nz[1]))
                 lower_and("VALVE_OFF", place_z, release_ms, slow_lift=True)
             rec.update(status="placed", board_xy=b.tolist(), nozzle_xy=nz.tolist(), part_offset_mm=u.tolist(),
@@ -285,7 +297,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             if verify_empty:
                 with timed(rec, "verify"):
                     chk = look_up(tip, None)
-                    mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+                    mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                 if chk.get("ok") or "offset_mm" in chk:
                     rec["status"] = "still on the nozzle after placing"
                     say(f"  {p['ref']}: part came back on the nozzle!")
@@ -298,7 +310,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
         for fd, f in saved_asks.values():
             fd.ask = f
     done = sum(r.get("status") == "placed" for r in results)
-    mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+    mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
     total = clock() - t_start
     st = timing_summary(results, total - waited[0], waited[0])
     if stats is not None:

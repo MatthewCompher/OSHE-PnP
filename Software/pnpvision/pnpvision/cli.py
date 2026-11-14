@@ -871,7 +871,8 @@ def _run_job(cfg, a, hmi):
                           recentre=None if a.no_recentre else recentre,
                           reject_xy=ms.get("reject_bin_xy"), ask=ask, say=say, log=log, retries=a.retries,
                           verify_empty=not a.no_verify, stats=stats,
-                          stop_requested=hmi.stop_requested if hmi else None)
+                          stop_requested=hmi.stop_requested if hmi else None,
+                          z_feeds=cfg.get("run", {}).get("z_feeds"))
     except JobError as e:
         raise SystemExit(str(e))
     finally:
