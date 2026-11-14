@@ -7,10 +7,10 @@ settle_s = 0.25               # wait after a move before grabbing a frame
 
 [machine]
 # Software travel limits: vision-driven moves outside these are refused.
-# Inside the live printer.cfg limits (X -5..235, Y -5..343, Z 0..60).
+# Inside the live printer.cfg limits (X -5..235, Y -5..343, Z 0..51).
 x_range = [0.0, 235.0]
 y_range = [0.0, 343.0]
-z_range = [0.0, 60.0]
+z_range = [0.0, 51.0]        # 51 = just past plate contact (Z ~50), matches printer.cfg
 # Z on this machine: 0 = homed at the top, LARGER Z = nozzle LOWER.
 #   nozzle tip touches the staging plate at Z ~ 50; touches the PCB top at Z ~ 38.
 # Tallest things on the plate: reject bin 15 mm, datum 11 mm, PCB clamps 8-10 mm.
