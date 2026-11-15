@@ -81,8 +81,11 @@ def test_stop_button_and_quotes():
     h.start()                                                      # next job clears it
     assert not h.stop_requested()
     h.say('part "U1" placed\nsecond line')
-    msgs = [s for s in k.sent if s.startswith("RESPOND MSG=")]
-    assert msgs[-2] == "RESPOND MSG=\"part 'U1' placed\"" and msgs[-1] == 'RESPOND MSG="second line"', msgs
+    msgs = [s for s in k.sent if s.startswith("RESPOND TYPE=command MSG=")]     # console only, no pop-up
+    assert (msgs[-2] == "RESPOND TYPE=command MSG=\"part 'U1' placed\""
+            and msgs[-1] == 'RESPOND TYPE=command MSG="second line"'), msgs
+    h.say("job result", popup=True)
+    assert k.sent[-1] == 'RESPOND MSG="job result"'                              # echo: pops up
 
 
 def test_missing_macros_reported():

@@ -43,9 +43,12 @@ class Hmi:
         self.mr, self.title, self.poll_s, self.sleep, self.echo = mr, title, poll_s, sleep, echo
 
     # -- low level -------------------------------------------------------------------------
-    def _respond(self, msg, error=False):
+    def _respond(self, msg, error=False, popup=False):
+        """KlipperScreen pops up 'echo:' lines (RESPOND's default) and '!!' errors over whatever is
+        on screen; '// ' lines (TYPE=command) only go to the console. Routine progress uses '// '."""
+        kind = "TYPE=error " if error else ("" if popup else "TYPE=command ")
         try:
-            self.mr.gcode(f'RESPOND {"TYPE=error " if error else ""}MSG="{_clean(msg)}"')
+            self.mr.gcode(f'RESPOND {kind}MSG="{_clean(msg)}"')
         except Exception as e:                       # never let the screen stop the machine
             self.echo(f"(hmi: could not send a message: {e})")
 
@@ -64,12 +67,13 @@ class Hmi:
                                "(Software/Klipper/pnp_hmi.cfg) and restart Klipper")
         self.mr.gcode(f"SET_GCODE_VARIABLE MACRO=PNP_ANSWER VARIABLE=stop VALUE=0")
 
-    def say(self, *parts):
+    def say(self, *parts, popup=False):
+        """Console line(s); popup=True also shows it over the touchscreen (keep for results)."""
         text = " ".join(str(p) for p in parts)
         self.echo(text)
         for line in text.splitlines():
             if line.strip():
-                self._respond(line)
+                self._respond(line, popup=popup)
 
     def error(self, text):
         self.echo("ERROR: " + str(text))
@@ -93,6 +97,7 @@ class Hmi:
         cmds = ["SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE=0"]
         if summary:
             cmds.append(f"M117 {_clean(summary, 60)}")
+            cmds.append(f'RESPOND MSG="{_clean(summary)}"')          # one pop-up: the result
         try:
             state = self.mr.query("print_stats").get("state")
         except Exception:

@@ -1051,7 +1051,7 @@ def cmd_hmi_test(cfg, a):
     hmi.start()
     hmi.say("hmi-test: a dialog should open now")
     ans = hmi.ask("Screen test: nothing moves. Did this dialog show up? [y/N]")
-    hmi.say(f"hmi-test: you tapped {'Yes' if ans == 'y' else 'No'}; dialogs work")
+    hmi.say(f"hmi-test: you tapped {'Yes' if ans == 'y' else 'No'}; dialogs work", popup=True)
 
 
 def cmd_set_offset(cfg, a):

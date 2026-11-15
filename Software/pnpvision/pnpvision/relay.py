@@ -65,7 +65,7 @@ def main(argv=None):
     if rc:
         hmi.error(f"{name} failed (exit {rc}): {tail[-1] if tail else 'see results/pnp_cmd_macro.log'}")
     else:
-        hmi.say(f"{name}: done")
+        hmi.say(f"{name}: done", popup=True)
     return rc
 
 
