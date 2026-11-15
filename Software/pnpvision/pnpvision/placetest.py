@@ -22,6 +22,7 @@ Hardware is injected (callables), so the whole cycle runs against a simulator in
 import cv2
 import numpy as np
 
+from .moonraker import lift
 from .detect import find_by_template, find_placed_part, outline_angle, symmetry_center
 from .rotation import rotate_xy, shortest_turn
 
@@ -201,7 +202,7 @@ def place_test(mr, down_grab, down_motion, down_principal, up_inspect, ms, next_
         mr.gcode(f"{valve}\nG4 P{int(ms_wait)}")
         if slow_lift:
             mr.move_abs(z=z - 0.5, feedrate=60)
-        mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+        lift(mr, feedrate=600)
 
     results = []
     t_idx = 0
@@ -238,7 +239,7 @@ def place_test(mr, down_grab, down_motion, down_principal, up_inspect, ms, next_
         mr.move_abs(z=inspect_z, feedrate=300)
         ins = up_inspect(size_mm)
         rec["inspect"] = ins
-        mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+        lift(mr, feedrate=600)
         if "offset_mm" not in ins:
             rec["status"] = "pick failed (nozzle empty)"
             say(f"  nozzle empty after the pick ({ins.get('reason')}).")
@@ -283,7 +284,7 @@ def place_test(mr, down_grab, down_motion, down_principal, up_inspect, ms, next_
                 u = u_new
                 if abs(shortest_turn(want, ins["angle_deg"], rotator.symmetry)) <= angle_tol_deg:
                     break
-            mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            lift(mr, feedrate=600)
             rec["turns"] = turns
             if lost:
                 rec["status"] = "part lost while turning"

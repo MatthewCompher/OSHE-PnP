@@ -6,9 +6,13 @@ It is opened from the "Pick & Place" menu (KlipperScreen_pnp.conf: panel: pnp_jo
 
 Shows the job state that run-job --hmi publishes in Klipper (gcode_macro _PNP_STATE, see
 Software/Klipper/pnp_hmi.cfg): machine homing, job, part n/total, placed/failed, elapsed time,
-the latest status line and the result. Idle: start a job (RUN_JOB macro). Running: Continue
-(answers the open question) and Stop job. Job questions still open as dialogs over any page.
-Light: polls one small Moonraker query per second, only while this page is on screen.
+the latest status line and the result. Idle: options + one button per job (RUN_JOB macro).
+Running: Continue (answers the open question) and Stop job (two taps on the page itself, no
+pop-up that a machine move could close). Job questions still open as dialogs over any page.
+
+Layout rules (2026-11-14 screen test): status lines never wrap (they pushed the buttons off
+screen), the two button sets are built once and only switched (never rebuilt), and buttons are
+KlipperScreen's normal size. Light: one small Moonraker query per second, only while shown.
 """
 import logging
 import os
@@ -23,6 +27,7 @@ from ks_includes.screen_panel import ScreenPanel
 
 JOBS_DIR = os.path.expanduser("~/OSHE-PnP/Software/pnpvision/jobs")
 STATE = "gcode_macro _PNP_STATE"
+STOP_ARM_S = 5
 
 
 def _elapsed(sec):
@@ -31,73 +36,78 @@ def _elapsed(sec):
     return f"{h} h {m:02d} min" if h else (f"{m} min {s:02d} s" if m else f"{s} s")
 
 
-def _label(text="-", **kw):
-    return Gtk.Label(label=text, xalign=0, wrap=True, wrap_mode=Pango.WrapMode.WORD_CHAR, **kw)
+def _set_button_text(button, text):
+    """KlipperScreen buttons hold their text in a Gtk.Label somewhere inside."""
+    stack = [button]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Gtk.Label):
+            w.set_text(text)
+            return
+        if isinstance(w, Gtk.Container):
+            stack.extend(w.get_children())
+    button.set_label(text)
 
 
 class Panel(ScreenPanel):
     def __init__(self, screen, title):
         super().__init__(screen, title or "PnP Job")
         self.timer = None
-        self.running = None                      # what the bottom area shows now
+        self.running = None
+        self.stop_armed = False
+        self.job_names = None
         self.opts = {"no_feeders": True, "align": False, "dry_run": False}
 
-        grid = Gtk.Grid(column_spacing=15, row_spacing=4, hexpand=True)
+        # status: one line each (ellipsized), the status line at most two
+        grid = Gtk.Grid(column_spacing=15, row_spacing=2, hexpand=True)
         self.info = {}
         rows = (("machine", "Machine"), ("job", "Job"), ("part", "Part"), ("count", "Placed"),
                 ("time", "Elapsed"), ("msg", "Status"))
         for i, (key, name) in enumerate(rows):
-            grid.attach(_label(f"<b>{name}</b>", use_markup=True, valign=Gtk.Align.START), 0, i, 1, 1)
-            self.info[key] = _label(hexpand=True)
-            grid.attach(self.info[key], 1, i, 1, 1)
+            head = Gtk.Label(label=name, xalign=0)
+            head.get_style_context().add_class("description")
+            grid.attach(head, 0, i, 1, 1)
+            lab = Gtk.Label(label="-", xalign=0, hexpand=True, ellipsize=Pango.EllipsizeMode.END)
+            if key == "msg":
+                lab.set_line_wrap(True)
+                lab.set_lines(2)
+            grid.attach(lab, 1, i, 1, 1)
+            self.info[key] = lab
 
-        self.bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, vexpand=True, spacing=5)
+        # idle: options + job buttons
+        self.idle = Gtk.Grid(row_homogeneous=True, column_homogeneous=True, row_spacing=5,
+                             column_spacing=5, hexpand=True, vexpand=True)
+        self.opt_buttons = {}
+        for col, (key, name) in enumerate((("no_feeders", "No feeders"), ("align", "Align first"),
+                                           ("dry_run", "Dry run"))):
+            b = self._gtk.Button("settings", name, "color4")
+            self._mark(b, self.opts[key])
+            b.connect("clicked", self._toggle, key)
+            self.idle.attach(b, col, 0, 1, 1)
+            self.opt_buttons[key] = b
+        self.job_buttons = []
+
+        # running: Continue / Stop job
+        run = Gtk.Grid(column_homogeneous=True, column_spacing=10, hexpand=True, vexpand=True)
+        cont = self._gtk.Button("resume", "Continue", "color3")
+        cont.connect("clicked", self._send, "PNP_CONTINUE")
+        self.stop_button = self._gtk.Button("stop", "Stop job", "color2")
+        self.stop_button.connect("clicked", self._stop)
+        run.attach(cont, 0, 0, 1, 1)
+        run.attach(self.stop_button, 1, 0, 1, 1)
+
+        self.stack = Gtk.Stack(hexpand=True, vexpand=True)
+        self.stack.add_named(self.idle, "idle")
+        self.stack.add_named(run, "run")
+
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True, vexpand=True)
         box.pack_start(grid, False, False, 0)
-        box.pack_start(self.bottom, True, True, 0)
+        box.pack_start(self.stack, True, True, 0)
         self.content.add(box)
-        self._build_bottom(False)
+        self._fill_jobs()
+        self._set_running(False)
 
-    # -- the lower half: job list (idle) or Continue / Stop (running) ------------------------
-    def _clear_bottom(self):
-        for child in self.bottom.get_children():
-            self.bottom.remove(child)
-            child.destroy()
-
-    def _build_bottom(self, running):
-        self.running = running
-        self._clear_bottom()
-        if running:
-            row = Gtk.Box(spacing=10, hexpand=True, vexpand=True)
-            cont = self._gtk.Button("resume", "Continue", "color3")
-            cont.connect("clicked", self._send, "PNP_CONTINUE")
-            stop = self._gtk.Button("stop", "Stop job", "color2")
-            stop.connect("clicked", self._confirm, "Stop the job after the current part?", "PNP_STOP")
-            row.pack_start(cont, True, True, 0)
-            row.pack_start(stop, True, True, 0)
-            self.bottom.pack_start(row, True, True, 0)
-        else:
-            opts = Gtk.Box(spacing=5, hexpand=True, vexpand=False)
-            for key, name in (("no_feeders", "No feeders"), ("align", "Align first"), ("dry_run", "Dry run")):
-                b = self._gtk.Button(None, name, None, self.bts, Gtk.PositionType.LEFT, 1)
-                b.get_style_context().add_class("buttons_slim")
-                self._mark(b, self.opts[key])
-                b.connect("clicked", self._toggle, key)
-                opts.pack_start(b, True, True, 0)
-            self.bottom.pack_start(opts, False, False, 0)
-            jobs = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
-            names = self._jobs()
-            if not names:
-                jobs.add(_label(f"No jobs in {JOBS_DIR}"))
-            for stem in names:
-                b = self._gtk.Button("resume", stem, "color1", self.bts, Gtk.PositionType.LEFT, 1)
-                b.connect("clicked", self._start, stem)
-                jobs.add(b)
-            sw = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
-            sw.add(jobs)
-            self.bottom.pack_start(sw, True, True, 0)
-        self.bottom.show_all()
-
+    # -- idle side -----------------------------------------------------------------------------
     @staticmethod
     def _jobs():
         try:
@@ -105,6 +115,25 @@ class Panel(ScreenPanel):
         except OSError as e:
             logging.error(f"pnp_job: {e}")
             return []
+
+    def _fill_jobs(self):
+        names = self._jobs()
+        if names == self.job_names:
+            return                                   # unchanged: don't touch the buttons
+        self.job_names = names
+        for b in self.job_buttons:
+            self.idle.remove(b)
+            b.destroy()
+        self.job_buttons = []
+        for i, stem in enumerate(names or [None]):
+            if stem is None:
+                b = self._gtk.Button("info", "No jobs found", None)
+            else:
+                b = self._gtk.Button("print", stem, "color1")
+                b.connect("clicked", self._start, stem)
+            self.idle.attach(b, i % 3, 1 + i // 3, 1, 1)
+            self.job_buttons.append(b)
+        self.idle.show_all()
 
     @staticmethod
     def _mark(button, on):
@@ -129,18 +158,42 @@ class Panel(ScreenPanel):
             script += " DRY_RUN=1"
         else:
             text += "\nNozzle empty, up light on."
-        self._confirm(widget, text, script)
+        self._screen._confirm_send_action(widget, text, "printer.gcode.script", {"script": script})
 
+    # -- running side --------------------------------------------------------------------------
     def _send(self, widget, script):
         self._screen._ws.api.gcode_script(script)
 
-    def _confirm(self, widget, text, script):
-        self._screen._confirm_send_action(widget, text, "printer.gcode.script", {"script": script})
+    def _stop(self, widget):
+        """Two taps on the page: no confirm pop-up for a machine move to close."""
+        if not self.stop_armed:
+            self.stop_armed = True
+            _set_button_text(self.stop_button, "Tap again to stop")
+            GLib.timeout_add_seconds(STOP_ARM_S, self._disarm)
+            return
+        self.stop_armed = False
+        self._send(widget, "PNP_STOP")
+        _set_button_text(self.stop_button, "Stopping after this part")
+
+    def _disarm(self):
+        if self.stop_armed:
+            self.stop_armed = False
+            _set_button_text(self.stop_button, "Stop job")
+        return False
+
+    def _set_running(self, running):
+        if running == self.running:
+            return
+        self.running = running
+        if running:
+            self.stop_armed = False
+            _set_button_text(self.stop_button, "Stop job")
+        self.stack.set_visible_child_name("run" if running else "idle")
 
     # -- status, once a second while the page is shown ---------------------------------------
     def activate(self):
-        if self.running is False:
-            self._build_bottom(False)            # re-read the job list
+        if not self.running:
+            self._fill_jobs()
         self._poll()
         if self.timer is None:
             self.timer = GLib.timeout_add_seconds(1, self._poll)
@@ -186,6 +239,5 @@ class Panel(ScreenPanel):
         self.info["time"].set_text(_elapsed((time.time() if running or t1 < t0 else t1) - t0) if t0 else "-")
         result = st.get("result") or ""
         self.info["msg"].set_text(result if result and not running else (st.get("msg") or "-"))
-        if running != self.running:
-            self._build_bottom(running)
+        self._set_running(running)
         return False

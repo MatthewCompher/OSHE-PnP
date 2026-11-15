@@ -100,3 +100,11 @@ class Moonraker:
         x, y, z = self.position()
         self.move_abs(x + dx if dx else None, y + dy if dy else None,
                       z + dz if dz else None, feedrate, stay_low=stay_low)
+
+
+def lift(mr, feedrate=None):
+    """Raise the nozzle to travel height if it is below it; never lower it (larger Z = lower on this
+    machine, so a nozzle at e.g. Z5 after homing stays there). Works with any object that has
+    position(), move_abs() and safe_travel_z (also the test fakes)."""
+    if mr.safe_travel_z is not None and mr.position()[2] > mr.safe_travel_z + 1e-6:
+        mr.move_abs(z=mr.safe_travel_z, feedrate=feedrate)

@@ -14,7 +14,7 @@ from .datum import DatumGeometry, measure_datum, to_datum_xy, to_machine_xy
 import numpy as np
 from .detect import find_circle, find_circles
 from .lens import LensModel
-from .moonraker import Moonraker
+from .moonraker import lift, Moonraker
 from .motion import MotionMap
 from .servo import calibrate_motion, center_on, repeatability_test, visual_home
 from .lighting import make_light, grab_lit
@@ -588,7 +588,7 @@ def cmd_place_test(cfg, a):
             print("not applying the offset: need at least 3 good cycles")
     finally:
         try:
-            mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            lift(mr, feedrate=600)
         except Exception as e:
             print("could not lift the nozzle:", e)
         if a.accel and old_accel:
@@ -745,9 +745,10 @@ def cmd_teach_bin(cfg, a):
         xy, src = reject_bin_xy(cfg, ms)
         if xy is None:
             raise SystemExit("no reject bin position (no teach-bin and no [layout] default)")
-        mr.move_abs(z=mr.safe_travel_z, feedrate=1200)
+        # move_abs only LIFTS (to Z{safe}) when the nozzle is below travel height; a nozzle that is
+        # already higher (e.g. Z5 after homing) stays there: never lower before an X/Y move
         mr.move_abs(x=float(xy[0]), y=float(xy[1]))
-        print(f"nozzle over the reject bin ({src}) at X{xy[0]:.3f} Y{xy[1]:.3f}, Z{mr.safe_travel_z}: "
+        print(f"nozzle over the reject bin ({src}) at X{xy[0]:.3f} Y{xy[1]:.3f}, Z{mr.position()[2]:.1f}: "
               "check it is over the bin opening; if not, jog it there and run teach-bin")
         return
     x, y, _ = mr.position()
@@ -947,7 +948,7 @@ def _run_job(cfg, a, hmi):
             grab = lambda: up_lens.undistort(up_cam.fresh(settle_s=cfg["moonraker"]["settle_s"]))
             res = center_on(grab, locate, lambda dx, dy: mr.move_rel(dx, dy, stay_low=True), up_motion,
                             (up_lens.newK[0, 2], up_lens.newK[1, 2]), max_step_mm=mr.MAX_LOW_XY_MM * 0.8)
-            mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            lift(mr, feedrate=600)
             if not res["converged"]:
                 raise SystemExit(f"could not find tip {tip}'s bore over the up camera ({res}); set "
                                  f"tips.{tip}.bore detector settings in machine.json (rmin/rmax/thresh)")
@@ -975,7 +976,7 @@ def _run_job(cfg, a, hmi):
         raise SystemExit(str(e))
     finally:
         try:
-            mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+            lift(mr, feedrate=600)
         except Exception as e:
             print("could not lift the nozzle:", e)
         up_cam.stop()

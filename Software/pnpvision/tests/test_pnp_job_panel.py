@@ -19,10 +19,14 @@ class _Label:
     def set_text(self, t):
         self.text = t
 
+    def __getattr__(self, name):                 # get_style_context, set_lines, ... : no-ops
+        return mock.MagicMock()
+
 
 def _load(tmp_jobs):
     gtk = mock.MagicMock()
     gtk.Label = _Label
+    gtk.Container = type("Container", (), {})          # isinstance() needs real classes
     glib = mock.MagicMock()
     glib.idle_add = lambda f, *a: f(*a)
     repo = types.SimpleNamespace(Gtk=gtk, GLib=glib, Pango=mock.MagicMock())
@@ -111,3 +115,32 @@ def test_poll_callback(tmp_path):
                               "toolhead": {"homed_axes": "xyz"}}}}, method, params)
     assert p.running is True
     cb({"error": "klippy not ready"}, method, params)     # ignored
+
+
+def test_stop_needs_two_taps_and_page_is_not_rebuilt(tmp_path):
+    mod, p, screen = _panel(tmp_path)
+    run = {"vision_homed": 1, "job_running": 1, "job": "j", "t_start": time.time()}
+    p._show(run, "xyz")
+    stop = p.stop_button
+    p._stop(stop)                                          # first tap: only arms
+    assert not screen._ws.api.gcode_script.called
+    stop.set_label.assert_called_with("Tap again to stop")
+    p._show(run, "xyz")                                    # status updates don't touch the buttons
+    assert p.stop_button is stop and p.stop_armed
+    p._stop(stop)                                          # second tap: stop
+    screen._ws.api.gcode_script.assert_called_with("PNP_STOP")
+    stop.set_label.assert_called_with("Stopping after this part")
+    p._stop(stop)                                          # a later single tap arms again
+    assert screen._ws.api.gcode_script.call_count == 1
+    p._disarm()
+    stop.set_label.assert_called_with("Stop job")
+
+
+def test_job_buttons_only_rebuilt_when_the_list_changes(tmp_path):
+    mod, p, screen = _panel(tmp_path)
+    first = list(p.job_buttons)
+    p.activate()
+    assert p.job_buttons == first
+    (tmp_path / "jobs" / "Other-top.job.json").write_text("{}")
+    p.activate()
+    assert len(p.job_buttons) == 2

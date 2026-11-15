@@ -15,6 +15,7 @@ Hardware is injected so it runs against a simulator in the tests.
 """
 import numpy as np
 
+from .moonraker import lift
 from .servo import center_on
 
 REQUIRED_OBJECTS = {
@@ -147,5 +148,5 @@ def check_machine(mr, ms, down, up, inspect_z, apply=False, say=print):
             add(_map_check("up camera map", up["grab"], up["locate"], move_low, up["motion"], 0.5,
                            "calibrate-motion --cam up --step 1 (row 8), then the centre again (row 8b)"))
     finally:
-        mr.move_abs(z=mr.safe_travel_z, feedrate=600)
+        lift(mr, feedrate=600)
     return out
