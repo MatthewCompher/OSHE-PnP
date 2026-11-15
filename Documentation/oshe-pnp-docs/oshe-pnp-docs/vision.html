@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>pnpvision: Calibration & Running Jobs | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html" aria-current="page">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>pnpvision: Calibration &amp; Running Jobs</h1>
+
+        <p><strong>pnpvision</strong> is the Python program on the Pi that gives the machine its accuracy.
+        It calibrates the cameras to the machine, finds the board, checks every part on the nozzle,
+        and runs jobs. It moves the machine through Moonraker and reads the cameras from crowsnest.
+        The code is in <code>Software/pnpvision</code>.</p>
+
+        <figure class="img-slot" data-src="images/vision-down-cam-crosshair.png" data-alt="Down-camera view centered on a datum dot with the crosshair">
+              <div class="img-placeholder">Image placeholder: Down-camera view centered on a datum dot with the crosshair<br><code>images/vision-down-cam-crosshair.png</code></div>
+            </figure>
+
+        <div class="note warn">Every vision command lifts the nozzle to a safe travel height (Z 30) before any
+        X/Y move. Remember: on this machine a <em>larger</em> Z is <em>lower</em>.</div>
+
+        <h2 id="install-on-the-pi">Install on the Pi</h2>
+        <pre><code>python3 -m venv ~/venv-pnp
+        cd ~/OSHE-PnP/Software/pnpvision
+        ~/venv-pnp/bin/pip install --only-binary=:all: -r requirements.txt</code></pre>
+        <p>Always use <code>--only-binary=:all:</code>: otherwise pip may try to build OpenCV from source,
+        which runs a 1 GB Pi out of memory. Run long installs inside <code>tmux</code>.</p>
+        <p>Commands run from <code>Software/pnpvision</code> as
+        <code>~/venv-pnp/bin/python -m pnpvision &lt;command&gt;</code>. Machine-specific settings (travel limits,
+        safe Z, camera URLs and sizes, lights) are in <code>config.toml</code>. Measured calibration results
+        are saved in <code>calibration/machine.json</code>.</p>
+        <p>Tests that need no hardware:</p>
+        <pre><code>python tests/test_offline.py &amp;&amp; python tests/test_datum.py</code></pre>
+
+        <h2 id="calibration">Calibration</h2>
+        <p>Do these once per machine, in order. The <strong>Redo when</strong> column says what makes a step
+        need repeating.</p>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>#</th><th>Step</th><th>Command</th><th>Redo when</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td><strong>Lens calibration</strong> for each camera, using a ChArUco board (7×5, 8 mm squares, 6 mm markers, DICT_4X4). Copy the <code>.npz</code> into <code>calibration/</code>.</td><td><code>calib_capture.py</code> (in Archive), then <code>check-lens</code></td><td>Lens refocused or swapped; resolution changed</td></tr>
+            <tr><td>2</td><td><strong>Check images</strong> and tune exposure and lighting.</td><td><code>snapshot --cam up|down</code></td><td>-</td></tr>
+            <tr><td>3</td><td><strong>Down-camera motion map</strong>: how camera pixels map to machine mm. Use a dark ~3 mm dot, fixed in place, at PCB-top height.</td><td><code>calibrate-motion --cam down --step 3</code></td><td>Camera moved or refocused</td></tr>
+            <tr><td>4</td><td><strong>Repeatability check</strong> (optional diagnostic).</td><td><code>repeatability --n 20</code> (<code>--home-every 5</code> to include homing)</td><td>Mechanical changes</td></tr>
+            <tr><td>5</td><td><strong>Teach visual homing</strong> with datum dot 0 under the crosshair. This defines the machine frame for everything after it.</td><td><code>home --teach --polarity bright --thresh 230</code></td><td>Datum or down camera moved (then redo everything below)</td></tr>
+            <tr><td>6</td><td><strong>VISION_HOME button</strong>: install the G-Code Shell Command extension (KIAUH) and the <code>VISION_HOME</code> sections in <code>printer.cfg</code>.</td><td>-</td><td>New Pi</td></tr>
+            <tr><td>7</td><td><strong>Down camera → nozzle offset</strong>: put the nozzle over a dot by eye, 3 runs.</td><td><code>calibrate-offset</code></td><td>Camera or nozzle holder moved</td></tr>
+            <tr><td>8</td><td><strong>Up-camera motion map and center</strong>: up light on, nozzle tip in focus over the up camera.</td><td><code>find-dot --cam up</code> to tune, then <code>calibrate-motion --cam up --find-center --step 1</code></td><td>Up camera moved or refocused</td></tr>
+            <tr><td>9</td><td><strong>Datum teach and reference</strong>: whole grid centered and sharp.</td><td><code>datum --teach</code>, <code>datum --reference</code></td><td>Datum moved</td></tr>
+            <tr><td>10</td><td><strong>Up-camera fixed exposure</strong> (see <a href="moonraker.html#fixed-exposure-for-the-up-camera">Moonraker</a>).</td><td><code>focus-sweep</code> to check saturation</td><td>Camera, light or lens changed</td></tr>
+            <tr><td>11</td><td><strong>Center on the real nozzle tip</strong> (not the holder face).</td><td><code>calibrate-motion --cam up --center-only --keep-offset</code></td><td>Tip changed or bent</td></tr>
+            <tr><td>12</td><td><strong>Inspection height</strong> with a part on the nozzle (Z 34.5 for 0805 on the prototype).</td><td><code>focus-sweep</code>, judged on the saved images</td><td>Tip or holder changed</td></tr>
+            <tr><td>13</td><td><strong>Nozzle rotation direction</strong>: turn 30° steps with a part on the nozzle and inspect.</td><td><code>inspect-up</code>, set <code>[rotation] direction</code> in <code>config.toml</code></td><td>Rotation motor or tip changed</td></tr>
+            <tr><td>14</td><td><strong>Refine the offset by placing parts</strong>: spare parts on a bare board, pick and place them, measure where they land.</td><td><code>place-test</code>, then <code>--apply-offset</code>, check with <code>--correct</code></td><td>Nozzle, head or a camera moved</td></tr>
+            <tr><td>15</td><td><strong>Nozzle tips</strong>: record each tip's board-touch Z and inspection Z.</td><td><code>tip &lt;NAME&gt; --board-touch-z Z --inspect-z Z [--current]</code></td><td>New tip</td></tr>
+            <tr><td>16</td><td><strong>Feeders</strong>: teach each feeder's pick spot (see <a href="#feeders">below</a>).</td><td><code>teach-feeder</code></td><td>Feeder moved</td></tr>
+            <tr><td>17</td><td><strong>Reject bin</strong>: nozzle over the bin at safe Z.</td><td><code>teach-bin</code></td><td>Bin moved</td></tr>
+          </tbody>
+        </table></div>
+
+        <figure class="img-slot" data-src="images/vision-datum.jpg" data-alt="The printed camera datum: 4 mm grid with white dots, seen from the down camera">
+              <div class="img-placeholder">Image placeholder: The printed camera datum: 4 mm grid with white dots, seen from the down camera<br><code>images/vision-datum.jpg</code></div>
+            </figure>
+        <figure class="img-slot" data-src="images/vision-charuco.jpg" data-alt="ChArUco calibration board used for lens calibration">
+              <div class="img-placeholder">Image placeholder: ChArUco calibration board used for lens calibration<br><code>images/vision-charuco.jpg</code></div>
+            </figure>
+
+        <div class="note">The motion map absorbs any camera rotation, mirroring or X/Y scale difference,
+        so the cameras don't need to be squared up mechanically. On the prototype the down camera is
+        rotated 0.5° and the up camera 90°; both work fine.</div>
+
+        <h2 id="running">Running a job</h2>
+        <ol>
+          <li><strong>Home:</strong> <code>VISION_HOME</code> from the console; wait for its result line. Then <code>UP_LIGHT_ON</code>.</li>
+          <li><strong>Align the board:</strong> put the board on the plate, center the down camera by eye on
+            alignment pad A, then:
+        <pre><code>python -m pnpvision align-board "jobs/&lt;board&gt;-top.job.json" --rot &lt;board rotation, degrees CCW&gt;</code></pre>
+            It photographs around each predicted pad, finds the pads, fits position and rotation, and
+            saves the board pose. Images go in <code>align_&lt;time&gt;/</code>.</li>
+          <li><strong>Dry run</strong>: the down camera photographs every placement spot with a crosshair, no parts:
+        <pre><code>python -m pnpvision run-job "jobs/&lt;board&gt;-top.job.json" --dry-run</code></pre></li>
+          <li><strong>Run</strong> (optionally only some parts, or without feeders):
+        <pre><code>python -m pnpvision run-job "jobs/&lt;board&gt;-top.job.json" [--only R1 R2 ...] [--no-feeders]</code></pre>
+            With <code>--no-feeders</code> you put a part in the pocket by hand when asked. The runner asks
+            you to swap nozzle tips when needed, and re-centers automatically.</li>
+        </ol>
+        <p>For each part the runner picks it, checks it over the up camera, corrects offset and angle,
+        and places it. Each part prints its cycle time per phase; the end prints seconds per part and
+        parts per hour. Results go in <code>results/job_&lt;time&gt;.json</code>, with up-camera images in
+        <code>job_&lt;time&gt;/</code>.</p>
+        <figure class="img-slot" data-src="images/vision-up-cam-inspect.png" data-alt="Up-camera view of an 0805 part on the nozzle with its detected outline and angle">
+              <div class="img-placeholder">Image placeholder: Up-camera view of an 0805 part on the nozzle with its detected outline and angle<br><code>images/vision-up-cam-inspect.png</code></div>
+            </figure>
+
+        <h3 id="from-the-touchscreen">From the touchscreen</h3>
+        <p>Run <code>make-launchers</code> (add <code>--no-feeders</code> until the feeders work) to put
+        <code>PNP_&lt;job&gt;.gcode</code> files in the print list, then select one on the touchscreen. See
+        <a href="macros.html#running-jobs-from-the-touchscreen">G-code Macros</a>.</p>
+
+        <h2 id="feeders">Feeders</h2>
+        <ol>
+          <li>Flash <code>Software/feeder_nano/feeder_nano.ino</code> to the Arduino Nano (set <code>SERVO_PINS</code> first).</li>
+          <li>Plug the Nano into the Pi and set <code>[feeders] port</code> in <code>config.toml</code>.</li>
+          <li>Test: <code>python -m pnpvision feed 1 --times 3</code></li>
+          <li>Teach each slot: jog the nozzle down until it just touches the part in the pick pocket, then
+        <pre><code>python -m pnpvision teach-feeder F1 --servo 1 --package R_0805_2012Metric</code></pre>
+            For a manual track (no servo), use <code>--manual --tape-angle &lt;deg&gt;</code>. The pick
+            position then refines itself from the up camera.</li>
+        </ol>
+        <p>The Nano accepts simple serial commands at 115200 baud: <code>F&lt;n&gt;</code> queues one stroke
+        on feeder n, <code>A&lt;n&gt;,&lt;deg&gt;</code> moves a servo to an angle, and <code>?</code> reports the state.</p>
+
+        <h2 id="recovering-after-the-machine-was-disturbed">Recovering after the machine was disturbed</h2>
+        <p>If the head was removed, the nozzle swapped, or anything bumped, run (nozzle empty, up light on,
+        after <code>VISION_HOME</code>):</p>
+        <pre><code>python -m pnpvision check-machine</code></pre>
+        <p>It checks that <code>printer.cfg</code> still has the pnpvision sections, the homing dot is on the
+        crosshair, both camera maps still predict small jogs correctly, and the nozzle is where the up
+        camera expects. It prints OK, or REDO with the step to repeat. <code>--apply</code> saves a moved
+        nozzle center.</p>
+
+        <h2 id="results-so-far-prototype-november-2026">Results so far (prototype, November 2026)</h2>
+        <ul>
+          <li>Repeatability about <strong>0.01 mm</strong>; sensorless homing alone lands 0.1–2 mm off, which visual homing fixes.</li>
+          <li>Board alignment on the test PCB: residuals ≤ 0.037 mm, and the right pads were found even when starting 1.7 mm off.</li>
+          <li>Placement tests with 0805 resistors: parts landed 0.03–0.17 mm from target, with angle errors under 1°.</li>
+          <li>Rotation to 45° landed about 4–5° short; this is acceptable for 0805 parts (reflow straightens chips) and a correction can be added later.</li>
+        </ul>
+        <div class="note verify">⚠ Verify: the full job runner and the touchscreen launch have been tested
+        mostly against a simulator. Update these results after the first full job.</div>
+
+        <h2 id="command-reference">Command reference</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Command</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>check-lens</code></td><td>Check lens calibration files (no hardware)</td></tr>
+            <tr><td><code>snapshot</code></td><td>Save a camera image</td></tr>
+            <tr><td><code>find-dot</code></td><td>Show which round blobs the detector finds (no moves)</td></tr>
+            <tr><td><code>focus-sweep</code></td><td>Step Z over the up camera and score sharpness</td></tr>
+            <tr><td><code>calibrate-motion</code></td><td>Map camera pixels to machine mm</td></tr>
+            <tr><td><code>calibrate-offset</code>, <code>set-offset</code></td><td>Measure or set the down camera → nozzle offset</td></tr>
+            <tr><td><code>repeatability</code></td><td>Go away and back N times, measure scatter</td></tr>
+            <tr><td><code>home</code></td><td>Visual homing (used by <code>VISION_HOME</code>)</td></tr>
+            <tr><td><code>datum</code></td><td>Teach, reference or re-measure the datum</td></tr>
+            <tr><td><code>light-test</code>, <code>inspect-up</code></td><td>Test lights; inspect a part on the nozzle</td></tr>
+            <tr><td><code>place-test</code></td><td>Pick and place spare parts to measure and refine accuracy</td></tr>
+            <tr><td><code>align-board</code></td><td>Find the board from its alignment pads</td></tr>
+            <tr><td><code>run-job</code></td><td>Place a job</td></tr>
+            <tr><td><code>make-launchers</code></td><td>Create touchscreen launchers</td></tr>
+            <tr><td><code>tip</code></td><td>Record a nozzle tip's heights / set the current tip</td></tr>
+            <tr><td><code>teach-feeder</code>, <code>feed</code>, <code>teach-bin</code></td><td>Feeder and reject-bin setup</td></tr>
+            <tr><td><code>check-machine</code></td><td>Check calibration after a disturbance</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="lessons-learned">Lessons learned</h2>
+        <ul>
+          <li><strong>Calibration targets must not move.</strong> A loose paper dot slid about 0.05 mm during fast moves and looked like a machine error. Tape or glue it.</li>
+          <li><strong>Measure features after centering them</strong> on the crosshair. The down camera is only ~11.5 mm from the work, so image scale changes about 9% per mm of height; off-center readings are unreliable.</li>
+          <li><strong>The up camera may not look straight up.</strong> Lowering the nozzle from Z 20 to Z 38 moved it ~1.6 mm in the image, so the up camera is calibrated and used at one fixed height.</li>
+          <li><strong>Use square pixels when undistorting.</strong> OpenCV's default made round dots look 24% oval.</li>
+          <li><strong>Textured prints need a fixed threshold.</strong> A white dot on a sparkly print broke automatic thresholding.</li>
+          <li><strong>LED noise affects vision.</strong> A flickering purple light makes white features much darker to the camera. See <a href="electronics.html#led-wiring-tips">LED wiring tips</a>.</li>
+        </ul>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

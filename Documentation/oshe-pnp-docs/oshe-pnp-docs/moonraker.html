@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Moonraker, Cameras & Integration | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html" aria-current="page">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>Moonraker, Cameras &amp; Integration</h1>
+
+        <p><strong>Moonraker</strong> is the web API that sits between Klipper and everything else.
+        Mainsail, KlipperScreen and pnpvision all talk to Klipper through it. This page covers its
+        configuration, the camera streams, and how pnpvision and the macros connect to it.</p>
+
+        <figure class="img-slot" data-src="images/moonraker-diagram.png" data-alt="Diagram: Mainsail, KlipperScreen and pnpvision talking to Moonraker, which talks to Klipper; crowsnest serving camera streams">
+              <div class="img-placeholder">Image placeholder: Diagram: Mainsail, KlipperScreen and pnpvision talking to Moonraker, which talks to Klipper; crowsnest serving camera streams<br><code>images/moonraker-diagram.png</code></div>
+            </figure>
+
+        <h2 id="how-the-pieces-connect">How the pieces connect</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>From</th><th>To</th><th>How</th></tr></thead>
+          <tbody>
+            <tr><td>Mainsail (browser)</td><td>Moonraker</td><td>HTTP/WebSocket on port 7125, via the Pi's web server</td></tr>
+            <tr><td>KlipperScreen</td><td>Moonraker</td><td>Same API, on the Pi</td></tr>
+            <tr><td>pnpvision</td><td>Moonraker</td><td>HTTP to <code>http://localhost:7125</code>: sends G-code and reads machine state</td></tr>
+            <tr><td>pnpvision</td><td>Cameras</td><td>Reads snapshots from crowsnest, so the dashboard views keep working</td></tr>
+            <tr><td>Klipper macros</td><td>pnpvision</td><td><code>gcode_shell_command</code> runs scripts that start pnpvision in the background</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="moonraker-endpoints-pnpvision-uses">Moonraker endpoints pnpvision uses</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Endpoint</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /printer/gcode/script</code></td><td>Send G-code (moves, light macros, etc.)</td></tr>
+            <tr><td><code>GET /printer/objects/query</code></td><td>Read state such as the toolhead position</td></tr>
+            <tr><td><code>GET /printer/objects/list</code></td><td>List available Klipper objects</td></tr>
+          </tbody>
+        </table></div>
+        <p>The Moonraker address is set in <code>Software/pnpvision/config.toml</code> under
+        <code>[moonraker] url</code>.</p>
+
+        <h3 id="why-the-shell-scripts-run-in-the-background">Why the shell scripts run in the background</h3>
+        <p>When a macro like <code>VISION_HOME</code> starts pnpvision, pnpvision sends its moves back to
+        Klipper through Moonraker. If the macro waited for the script to finish, Klipper would be
+        waiting for the script while the script waits for Klipper: a deadlock. So
+        <code>scripts/vision_home.sh</code> and <code>scripts/run_job.sh</code> start pnpvision with
+        <code>setsid nohup … &amp;</code> and return right away. Results show up in the Mainsail console and
+        in log files under <code>results/</code>.</p>
+
+        <h2 id="moonraker-conf">moonraker.conf</h2>
+        <p>The prototype's file is in <code>Software/Klipper/from-pi/moonraker.conf</code>. On the Pi it lives
+        in <code>~/printer_data/config/</code>. Main sections:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Section</th><th>Setting</th></tr></thead>
+          <tbody>
+            <tr><td><code>[server]</code></td><td>Listens on all addresses, port 7125</td></tr>
+            <tr><td><code>[authorization]</code></td><td>Trusts local network ranges (10.x, 172.16–31.x, 192.168.x, link-local, localhost) and allows <code>*.local</code> / <code>*.lan</code> browsers</td></tr>
+            <tr><td><code>[file_manager]</code></td><td>Object processing off (saves memory on the 1 GB Pi)</td></tr>
+            <tr><td><code>[history]</code>, <code>[octoprint_compat]</code>, <code>[announcements]</code></td><td>Job history, OctoPrint-compatible API, Mainsail news</td></tr>
+            <tr><td><code>[update_manager …]</code></td><td>Updates for Mainsail, mainsail-config, crowsnest, sonar, Obico and klipper-led_effect from Mainsail's Update Manager</td></tr>
+          </tbody>
+        </table></div>
+        <div class="note warn"><strong>Security:</strong> trusted clients can control the machine without
+        logging in. Only connect it to a network you trust.</div>
+
+        <h2 id="cameras">Cameras (crowsnest)</h2>
+        <p>crowsnest streams both USB cameras. Its config is <code>crowsnest.conf</code> (copy in
+        <code>Software/Klipper/from-pi/</code>).</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th></th><th><code>[cam 1]</code>: down camera</th><th><code>[cam 2]</code>: up camera</th></tr></thead>
+          <tbody>
+            <tr><td>Device</td><td>Arducam 12MP USB</td><td>InnoMaker U20CAM 720P</td></tr>
+            <tr><td>Resolution</td><td>1920×1080</td><td>1280×720</td></tr>
+            <tr><td>Max FPS</td><td>15</td><td>15</td></tr>
+            <tr><td>Port</td><td>8080</td><td>8081</td></tr>
+            <tr><td>Stream URL</td><td><code>/webcam/</code></td><td><code>/webcam2/</code></td></tr>
+            <tr><td>Snapshot URL (used by pnpvision)</td><td><code>http://localhost/webcam/?action=snapshot</code></td><td><code>http://localhost/webcam2/?action=snapshot</code></td></tr>
+            <tr><td>Exposure</td><td>Automatic</td><td>Fixed (see below)</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>Use <code>/dev/v4l/by-id/…</code> device paths so the cameras keep their roles after a reboot.</li>
+          <li>The resolution in <code>crowsnest.conf</code>, in pnpvision's <code>config.toml</code>, and in the
+            lens calibration file must all match.</li>
+        </ul>
+
+        <h3 id="fixed-exposure-for-the-up-camera">Fixed exposure for the up camera</h3>
+        <p>Automatic exposure readjusts every time the light switches, giving washed-out frames. The up
+        camera uses fixed settings in its <code>[cam 2]</code> section:</p>
+        <pre><code>v4l2ctl: auto_exposure=1,exposure_dynamic_framerate=0,white_balance_automatic=0,power_line_frequency=2,exposure_time_absolute=80</code></pre>
+        <p>To find the right value for your camera, list its controls with <code>v4l2-ctl -d &lt;device&gt; -L</code>,
+        try values live with <code>v4l2-ctl -d &lt;device&gt; -c …</code>, and aim for 0–0.3% saturated pixels
+        (pnpvision's <code>focus-sweep</code> reports this).</p>
+
+        <h3 id="undistorted-camera-views">Undistorted camera views</h3>
+        <p>Two optional services, <code>undistort-down</code> and <code>undistort-up</code> (ports 8090 and
+        8091), show lens-corrected views with a crosshair reticle in Mainsail. They come from
+        <code>Archive/USB Camera Calibration Vibecode Project/undistort_stream.py</code>; add
+        <code>--motion</code> for millimeter tick marks. Restart them after recalibrating.</p>
+        <figure class="img-slot" data-src="images/moonraker-undistorted-view.png" data-alt="Mainsail showing the undistorted down-camera view with crosshair and mm ticks">
+              <div class="img-placeholder">Image placeholder: Mainsail showing the undistorted down-camera view with crosshair and mm ticks<br><code>images/moonraker-undistorted-view.png</code></div>
+            </figure>
+
+        <h2 id="print-list-launchers">Print list launchers</h2>
+        <p><code>pnpvision make-launchers</code> writes small <code>PNP_&lt;job&gt;.gcode</code> and
+        <code>PNP_&lt;job&gt;_ALIGN.gcode</code> files into Moonraker's G-code folder. They appear in the print
+        list in Mainsail and on the touchscreen; selecting one runs <code>RUN_JOB</code>. See
+        <a href="macros.html#running-jobs-from-the-touchscreen">G-code Macros</a>.</p>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+          <tbody>
+            <tr><td>Moonraker warning about crowsnest <code>install_script</code></td><td>In <code>moonraker.conf</code> under <code>[update_manager crowsnest]</code>, set <code>install_script: tools/install.sh</code>.</td></tr>
+            <tr><td>Camera shows "NO SIGNAL" or crowsnest won't start</td><td>Check <code>~/printer_data/logs/crowsnest.log</code>. "<code>ustreamer</code> not found" means crowsnest must be reinstalled: <code>cd ~/crowsnest &amp;&amp; sudo make install</code>, inside <code>tmux</code>.</td></tr>
+            <tr><td>pnpvision can't reach the machine</td><td>Check Moonraker is running and <code>[moonraker] url</code> in <code>config.toml</code> is <code>http://localhost:7125</code>.</td></tr>
+            <tr><td>Touchscreen job dialogs don't appear</td><td>Use <code>PNP_CONTINUE</code> or <code>PNP_STOP</code> from the console. Check that your KlipperScreen version shows <code>action:prompt</code> dialogs.</td></tr>
+          </tbody>
+        </table></div>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

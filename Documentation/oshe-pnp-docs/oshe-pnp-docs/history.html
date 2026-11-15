@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Project History | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html" aria-current="page">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>Project History</h1>
+
+        <p>The OSHE Pick and Place is built one version per academic semester. Each version is still
+        buildable, but <strong>V3 is the recommended design</strong>. Files for older versions are in
+        <code>CAD/V1-Legacy</code>, <code>CAD/V2-Legacy</code> and <code>BOMs/Legacy</code>.</p>
+
+        <h2 id="v1-proof-of-concept-fall-2025">V1: Proof of concept (Fall 2025)</h2>
+        <figure class="img-slot" data-src="images/history-v1.png" data-alt="Render of the complete V1 assembly">
+              <div class="img-placeholder">Image placeholder: Render of the complete V1 assembly<br><code>images/history-v1.png</code></div>
+            </figure>
+        <p>The first version converted an Ender 3 frame into a basic XYZ machine, running modified
+        <strong>Marlin</strong> firmware on the Ender 3's own control board (V4.2.2). The firmware is kept
+        in <code>Software/Legacy-Marlin</code>.</p>
+        <div class="table-wrap"><table>
+          <tbody>
+            <tr><th>Machine size</th><td>486 × 365 × 320 mm</td></tr>
+            <tr><th>Max PCB area</th><td>125 × 125 mm</td></tr>
+            <tr><th>X-Y travel</th><td>237 × 287 mm</td></tr>
+            <tr><th>Reel space</th><td>200 mm</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="v2-klipper-and-a-rotating-toolhead-spring-2026">V2: Klipper and a rotating toolhead (Spring 2026)</h2>
+        <figure class="img-slot" data-src="images/history-v2.png" data-alt="Render of the complete V2 assembly">
+              <!-- Suggested source in the repo: Media/V2/setup.jpg (photo) or Media/V2/MasterRender.PNG (render) -->
+              <div class="img-placeholder">Image placeholder: Render of the complete V2 assembly<br><code>images/history-v2.png</code></div>
+            </figure>
+        <p>V2 rebuilt most of the machine:</p>
+        <ul>
+          <li>A nearly fully 3D-printed <strong>toolhead with nozzle rotation</strong> (bevel gears, thrust
+            bearings, spring-loaded nozzle).</li>
+          <li>A <strong>vacuum system</strong>: 12 V diaphragm pump and normally-closed solenoid, in their own enclosure.</li>
+          <li>A <strong>modular printed frame</strong> (top, middle, bottom leg pieces) with roller-based X and Y axes.</li>
+          <li>A spring-loaded <strong>PCB clamp</strong> on rods.</li>
+          <li>Electronics moved to a <strong>BTT Octopus Pro with TMC5160 drivers and a Raspberry Pi 5</strong>, in a printed enclosure with an e-stop.</li>
+          <li>Firmware moved to <strong>Klipper</strong> with Mainsail, with sensorless homing and pick/place macros.</li>
+        </ul>
+        <div class="table-wrap"><table>
+          <tbody>
+            <tr><th>Machine size</th><td>370 × 480 × 352.5 mm</td></tr>
+            <tr><th>Max PCB area</th><td>250 × 250 mm</td></tr>
+            <tr><th>X-Y travel</th><td>305 × 289 mm</td></tr>
+            <tr><th>Reel space</th><td>280 mm</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="v2-test-results">V2 test results</h3>
+        <p>In testing, about <strong>88 of 100 picks</strong> succeeded and <strong>18 of 25 placements</strong>
+        succeeded. Most placement failures came from one batch caused by user error, and one error
+        tended to cause the next. The modified PushPull feeder proved unreliable on 40 mm extrusion.</p>
+
+        <p>The full V2 build guide, wiring and bill of materials are in the
+        <a href="https://docs.google.com/document/d/1zdPMhOE8R7Szz68Ky9EoDyxVyp7iftD7q8Uco1WKPY8/edit?usp=sharing">V2 documentation</a>.</p>
+
+        <h2 id="v3-corexy-and-vision-fall-2026">V3: CoreXY and vision (Fall 2026)</h2>
+        <p>V3 addressed V2's accuracy and feeding problems:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th></th><th>V2</th><th>V3</th></tr></thead>
+          <tbody>
+            <tr><td>Motion</td><td>Roller-based X/Y</td><td>CoreXY (Voron-inspired)</td></tr>
+            <tr><td>Toolhead</td><td>Printed, bevel-gear rotation</td><td>LumenPnP-style, CP40 tips, NEMA 11 rotation</td></tr>
+            <tr><td>Air</td><td>Diaphragm vacuum pump</td><td>Air compressor</td></tr>
+            <tr><td>Feeders</td><td>PushPull (printed)</td><td>0816 low-profile with servos</td></tr>
+            <tr><td>Board holding</td><td>Rod clamp</td><td>Staging plate with PCB mounts and datum</td></tr>
+            <tr><td>Vision</td><td>None</td><td>Up and down cameras, pnpvision</td></tr>
+            <tr><td>Job creation</td><td>Hand-written macros</td><td>pnpslice from KiCad</td></tr>
+            <tr><td>Host</td><td>Raspberry Pi 5</td><td>Raspberry Pi 4 (touchscreen compatibility)</td></tr>
+          </tbody>
+        </table></div>
+        <p>See <a href="index.html#current-status-v3">current status</a>.</p>
+
+        <h2 id="archived-experiments">Archived experiments</h2>
+        <ul>
+          <li><strong>Gerber-to-GCode</strong> (<code>Archive/Gerber to PCB Vibecode Mini Project</code>): a browser
+            tool from V1 that converted Gerber files to G-code. Replaced by pnpslice.</li>
+          <li><strong>USB camera calibration</strong> (<code>Archive/USB Camera Calibration Vibecode Project</code>):
+            lens calibration capture and the undistorted stream service. Still used by V3.</li>
+        </ul>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>
