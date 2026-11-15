@@ -794,6 +794,7 @@ def cmd_run_job(cfg, a):
     lock = None
     owner = False                         # this process holds the job: it closes the job page
     ok = False
+    summary = ""
     try:
         try:
             import fcntl
@@ -805,15 +806,25 @@ def cmd_run_job(cfg, a):
             raise SystemExit("a job is already running (Stop job to end it)")
         owner = True
         hmi.start()
+        hmi.begin_job(("Dry run: " if a.dry_run else "") + os.path.basename(str(a.job)).replace(".job.json", ""))
         res = _run_job(cfg, a, hmi)
         ok = not hmi.stop_requested()
+        st = getattr(a, "stats_out", None) or {}
+        if a.dry_run:
+            summary = "Dry run done" if ok else "Dry run stopped"
+        elif st.get("attempted") is not None:
+            cph = f", {st['cph']:.0f} CPH" if st.get("cph") else ""
+            summary = f"{'Done' if ok else 'Stopped'}: {st['placed']}/{st['attempted']} placed{cph}"
+        else:
+            summary = "Job done" if ok else "Job stopped"
         return res
     except BaseException as e:            # SystemExit too: those carry the useful message
         hmi.error(f"RUN_JOB failed: {e}")
+        summary = f"Failed: {e}"
         raise
     finally:
         if owner:
-            hmi.end_job(ok, "Job done" if ok else "Job stopped")
+            hmi.end_job(ok, summary)
         if lock is not None:
             lock.close()
 
@@ -959,6 +970,7 @@ def _run_job(cfg, a, hmi):
                           z_feeds=cfg.get("run", {}).get("z_feeds"),
                           show_pick=getattr(a, "show_pick", False),
                           progress=hmi.progress if hmi else None)
+        a.stats_out = stats                    # the touchscreen's result line (cmd_run_job)
     except JobError as e:
         raise SystemExit(str(e))
     finally:

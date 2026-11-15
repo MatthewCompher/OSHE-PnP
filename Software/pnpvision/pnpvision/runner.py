@@ -199,7 +199,8 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             results.append(rec)
             say(f"\n[{n}/{len(steps)}] {p['ref']} {p.get('value', '')} ({p['package']}) from {fd.id}, tip {tip}")
             if progress is not None:          # touchscreen job page: part n of total
-                progress(n, len(steps), p["ref"], sum(r.get("status") == "placed" for r in results[:-1]))
+                done = sum(r.get("status") == "placed" for r in results[:-1])
+                progress(n, len(steps), p["ref"], done, len(results) - 1 - done)
             if tip != current_tip:
                 with timed(rec, "tip"):
                     mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])

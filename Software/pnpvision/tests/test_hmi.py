@@ -157,17 +157,29 @@ class FakeState:
         return {}
 
 
-def test_progress_sets_layer_and_status_line():
+def test_job_page_variables():
+    """run-job publishes the job page state in _PNP_STATE (strings as Python literals)."""
     k = FakeState()
-    _hmi(k).progress(3, 12, "R0805_18", placed=2)
-    assert "SET_PRINT_STATS_INFO TOTAL_LAYER=12 CURRENT_LAYER=3" in k.sent
-    assert any(s.startswith("M117 Part 3/12: R0805_18, 2 placed") for s in k.sent), k.sent
+    h = _hmi(k)
+    h.begin_job("Test PCB-top")
+    first = k.sent[-1].splitlines()
+    var = lambda k, v: f'SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE={k} VALUE="{v}"'
+    assert var("job", "'Test PCB-top'") in first, first
+    assert 'SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE="1"' in first
+    h.progress(3, 12, "R0805_18", placed=2, failed=0)
+    last = k.sent[-1].splitlines()
+    assert 'SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=part VALUE="3"' in last
+    assert var("ref", "'R0805_18'") in last
+    h.say("placed at [1, 2], angle 0.4 (target 0.8 mod 180)")
+    assert k.sent[-1] == var("msg", "'placed at [1, 2], angle 0.4 (target 0.8 mod 180)'"), k.sent[-1]
+    h.say("it's 'quoted'")                                  # quotes can't break the literal
+    assert "VALUE=\"'its quoted'\"" in k.sent[-1], k.sent[-1]
 
 
 def test_end_job_completes_paused_launcher_without_moving():
     k = FakeState(print_state="paused")
     _hmi(k).end_job(True, "Job done")
-    assert k.sent[0] == "SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE=0"
+    assert 'VARIABLE=job_running VALUE="0"' in k.sent[0] and "VARIABLE=result" in k.sent[0]
     assert "SAVE_GCODE_STATE NAME=PAUSE_STATE\nRESUME_BASE" in k.sent      # re-save first: no move back
     k = FakeState(print_state="paused")
     _hmi(k).end_job(False)

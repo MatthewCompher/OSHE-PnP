@@ -68,12 +68,15 @@ class Hmi:
         self.mr.gcode(f"SET_GCODE_VARIABLE MACRO=PNP_ANSWER VARIABLE=stop VALUE=0")
 
     def say(self, *parts, popup=False):
-        """Console line(s); popup=True also shows it over the touchscreen (keep for results)."""
+        """Console line(s); popup=True also shows it over the touchscreen (keep for results).
+        During a job the last line is also the status line on the PnP job page."""
         text = " ".join(str(p) for p in parts)
         self.echo(text)
-        for line in text.splitlines():
-            if line.strip():
-                self._respond(line, popup=popup)
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        for line in lines:
+            self._respond(line, popup=popup)
+        if lines and self.job_active:
+            self._setvars(msg=lines[-1])
 
     def error(self, text):
         self.echo("ERROR: " + str(text))
@@ -81,22 +84,45 @@ class Hmi:
             if line.strip():
                 self._respond(line, error=True)
 
-    def progress(self, n, total, ref, placed=None):
-        """Job page on the touchscreen: 'Layer n / total' and the status line show the part."""
-        msg = f"Part {n}/{total}: {ref}" + (f", {placed} placed" if placed is not None else "")
-        for g in (f"SET_PRINT_STATS_INFO TOTAL_LAYER={int(total)} CURRENT_LAYER={int(n)}",
-                  f"M117 {_clean(msg, 60)}"):
-            try:
-                self.mr.gcode(g)
-            except Exception as e:
-                self.echo(f"(hmi: {e})")
+    # -- PnP job page (KlipperScreen panel pnp_job.py reads gcode_macro _PNP_STATE) --------------
+    job_active = False
+
+    def _setvars(self, **kw):
+        """SET_GCODE_VARIABLE on _PNP_STATE; strings become Python literals ('text')."""
+        lines = []
+        for k, v in kw.items():
+            if isinstance(v, str):
+                v = "'" + _clean(v, 120).replace("'", "") + "'"
+            elif isinstance(v, float):
+                v = f"{v:.1f}"
+            lines.append(f'SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE={k} VALUE="{v}"')
+        try:
+            self.mr.gcode("\n".join(lines))
+        except Exception as e:
+            self.echo(f"(hmi: {e})")
+
+    def begin_job(self, name):
+        self.job_active = True
+        self._setvars(job_running=1, job=name, part=0, total=0, ref="", placed=0, failed=0,
+                      t_start=time.time(), t_end=0.0, msg="starting", result="")
+
+    def progress(self, n, total, ref, placed=None, failed=None):
+        """Job page: part n of total, which part, placed/failed so far."""
+        kw = dict(part=int(n), total=int(total), ref=str(ref))
+        if placed is not None:
+            kw["placed"] = int(placed)
+        if failed is not None:
+            kw["failed"] = int(failed)
+        self._setvars(**kw)
 
     def end_job(self, ok, summary=""):
-        """Job over: clear job_running and close the launcher's paused 'print' (complete if ok,
-        cancelled otherwise) without moving: the pause position is re-saved here first."""
-        cmds = ["SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE=0"]
+        """Job over: clear job_running, show the result (job page + one pop-up), and close a
+        launcher's paused 'print' if there is one (complete if ok, cancelled otherwise) without
+        moving: the pause position is re-saved first."""
+        self.job_active = False
+        self._setvars(job_running=0, t_end=time.time(), result=summary or ("Job done" if ok else "Job stopped"))
+        cmds = []
         if summary:
-            cmds.append(f"M117 {_clean(summary, 60)}")
             cmds.append(f'RESPOND MSG="{_clean(summary)}"')          # one pop-up: the result
         try:
             state = self.mr.query("print_stats").get("state")
