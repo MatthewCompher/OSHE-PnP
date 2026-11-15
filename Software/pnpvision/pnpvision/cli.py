@@ -708,11 +708,50 @@ def cmd_teach_feeder(cfg, a):
         print("  check:", w)
 
 
+def default_reject_bin_xy(cfg, ms):
+    """Factory bin position (nozzle XY) from where it is bolted on the staging plate: the up
+    camera's measured centre plus the plate distance from the up camera's insert to the middle
+    of the bin's inserts (config [layout]). Assumes the plate is square to the machine axes
+    (the datum measured 0.03 deg). None if the layout or the up-camera centre is missing."""
+    L = cfg.get("layout", {})
+    if "reject_bin_inserts" not in L or "up_cam_insert" not in L or "up_cam_xy_mm" not in ms:
+        return None
+    org, pitch = np.asarray(L["insert_origin_mm"], float), float(L["insert_pitch_mm"])
+    plate = lambda ij: org + pitch * np.asarray(ij, float)
+    bin_plate = np.mean([plate(ij) for ij in L["reject_bin_inserts"]], axis=0)
+    bin_plate = bin_plate + np.asarray(L.get("reject_bin_offset_mm", [0.0, 0.0]), float)
+    return (np.asarray(ms["up_cam_xy_mm"], float) + bin_plate - plate(L["up_cam_insert"])).tolist()
+
+
+def reject_bin_xy(cfg, ms):
+    """(xy, source): a bin taught with teach-bin wins over the factory default."""
+    if ms.get("reject_bin_xy"):
+        return ms["reject_bin_xy"], "taught"
+    d = default_reject_bin_xy(cfg, ms)
+    return (d, "default from the plate layout") if d else (None, "none")
+
+
 def cmd_teach_bin(cfg, a):
+    path = C.rel(cfg, "calibration/machine.json")
     mr = make_mr(cfg)
+    if a.default:
+        MS.save(path, reject_bin_xy=None)          # null = not taught: the default applies
+    ms = MS.load(path)
+    if a.goto or a.default:
+        xy, src = reject_bin_xy(cfg, ms)
+        if xy is None:
+            raise SystemExit("no reject bin position (no teach-bin and no [layout] default)")
+        mr.move_abs(z=mr.safe_travel_z, feedrate=1200)
+        mr.move_abs(x=float(xy[0]), y=float(xy[1]))
+        print(f"nozzle over the reject bin ({src}) at X{xy[0]:.3f} Y{xy[1]:.3f}, Z{mr.safe_travel_z}: "
+              "check it is over the bin opening; if not, jog it there and run teach-bin")
+        return
     x, y, _ = mr.position()
-    MS.save(C.rel(cfg, "calibration/machine.json"), reject_bin_xy=[x, y])
-    print(f"reject bin at X{x:.3f} Y{y:.3f} (parts are dropped from Z{mr.safe_travel_z})")
+    MS.save(path, reject_bin_xy=[x, y])
+    d = default_reject_bin_xy(cfg, ms)
+    note = f" ({x - d[0]:+.2f}, {y - d[1]:+.2f}) mm from the factory default" if d else ""
+    print(f"reject bin taught at X{x:.3f} Y{y:.3f}{note} (parts are dropped from Z{mr.safe_travel_z}); "
+          "teach-bin --default goes back to the default")
 
 
 def cmd_feed(cfg, a):
@@ -884,7 +923,7 @@ def _run_job(cfg, a, hmi):
         results = run_job(job, pose, ms, mr, up_inspect, rot, bank, tips, packages, only,
                           current_tip=a.tip or ms.get("current_tip"),
                           recentre=None if a.no_recentre else recentre,
-                          reject_xy=ms.get("reject_bin_xy"), ask=ask, say=say, log=log, retries=a.retries,
+                          reject_xy=reject_bin_xy(cfg, ms)[0], ask=ask, say=say, log=log, retries=a.retries,
                           verify_empty=not a.no_verify, stats=stats,
                           stop_requested=hmi.stop_requested if hmi else None,
                           z_feeds=cfg.get("run", {}).get("z_feeds"),
@@ -1103,7 +1142,9 @@ def main():
     p.add_argument("--value", help="only parts with this value (default: any)")
     p.add_argument("--tape-angle", type=float,
                    help="machine angle of the part's rot-0 orientation in the pocket (parts with a pin 1)")
-    p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it")
+    p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it (overrides the plate-layout default)")
+    p.add_argument("--goto", action="store_true", help="move the nozzle over the bin in use (taught or default), save nothing")
+    p.add_argument("--default", action="store_true", help="forget the taught bin, use the plate-layout default (and go there)")
     p = sub.add_parser("feed", help="stroke a servo feeder (tests the Nano)")
     p.add_argument("servo", type=int)
     p.add_argument("--times", type=int, default=1)
