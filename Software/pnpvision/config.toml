@@ -14,10 +14,17 @@ z_range = [0.0, 51.0]        # 51 = just past plate contact (Z ~50), matches pri
 # Z on this machine: 0 = homed at the top, LARGER Z = nozzle LOWER.
 #   nozzle tip touches the staging plate at Z ~ 50; touches the PCB top at Z ~ 38.
 # Tallest things on the plate: reject bin 15 mm, datum 11 mm, PCB clamps 8-10 mm.
-# Before ANY X/Y move, vision lifts the nozzle to at least this Z (smaller = higher).
-# 30 = nozzle tip 20 mm above the plate = 5 mm over the bin, with room for a part
-# hanging below the tip. Lower the bin -> this can go up (closer to 50) later.
-safe_travel_z = 30.0
+# Before ANY X/Y move, vision lifts the nozzle to at least this Z (smaller = higher); a nozzle
+# that is already higher stays there (it is never lowered before an X/Y move).
+# 26 (2026-11-14, was 30): clears the feeders near their pick spots (user: "at most Z26 near the
+# pick location") and is ~24 mm over the plate / ~9 mm over the reject bin. At the very front
+# (Y ~ 0) the feeders need Z22 or higher: only homing goes there, and it raises Z to Z5 first.
+safe_travel_z = 26.0
+# Feeders at the front: any X/Y move that starts or ends at Y < front_zone_y first lifts the
+# nozzle to front_zone_z or higher (user, 2026-11-14: "anything less than Y30 is risky", Z22 safe
+# at Y0). Manual jogs in Mainsail / on the screen are NOT guarded: raise Z first near the front.
+front_zone_y = 30.0
+front_zone_z = 22.0
 # Measured offsets (down_cam_offset_mm, up_cam_xy_mm) live in calibration/machine.json,
 # written by the calibrate-* commands. For reference, CAD puts the down camera about
 # 7.71 mm (X) and 53.037 mm (Y) from the nozzle; calibrate-offset measures the real value.

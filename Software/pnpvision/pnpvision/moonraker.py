@@ -9,13 +9,16 @@ class MoveRefused(Exception):
 class Moonraker:
     def __init__(self, url="http://localhost:7125", feedrate=3000,
                  x_range=(0, 300), y_range=(0, 300), z_range=(0, 60), timeout=120,
-                 safe_travel_z=None):
+                 safe_travel_z=None, front_zone_y=None, front_zone_z=None):
         """safe_travel_z: on this machine larger Z = nozzle LOWER. Before any XY move the
         nozzle is lifted to at least this height (Z <= safe_travel_z), so it clears the
-        datum, reject bin and PCB clamps. None disables the guard."""
+        datum, reject bin and PCB clamps. None disables the guard.
+        front_zone_y / front_zone_z: the feeders at the front. An XY move that starts or ends
+        at Y < front_zone_y first lifts the nozzle to at least front_zone_z (2026-11-14: Y30, Z22)."""
         self.url, self.feedrate, self.timeout = url.rstrip("/"), feedrate, timeout
         self.limits = {"x": x_range, "y": y_range, "z": z_range}
         self.safe_travel_z = safe_travel_z
+        self.front_zone_y, self.front_zone_z = front_zone_y, front_zone_z
 
     # -- raw ---------------------------------------------------------------
     def gcode(self, script):
@@ -78,7 +81,11 @@ class Moonraker:
         xy = [f"{a.upper()}{v:.4f}" for a, v, c in (("x", x, cx), ("y", y, cy))
               if v is not None and abs(v - c) > 1e-6]
         lines = ["G90"]
-        low = xy and self.safe_travel_z is not None and cz > self.safe_travel_z + 1e-6
+        travel_z = self.travel_z_for(cy, y if y is not None else cy) if xy else None
+        low = xy and travel_z is not None and cz > travel_z + 1e-6
+        if low and stay_low and travel_z != self.safe_travel_z:
+            raise MoveRefused(f"no low X/Y moves near the feeders (Y < {self.front_zone_y}): "
+                              f"the nozzle must be at Z{self.front_zone_z} or higher")
         if low and stay_low:
             d = ((x if x is not None else cx) - cx) ** 2 + ((y if y is not None else cy) - cy) ** 2
             if d ** 0.5 > self.MAX_LOW_XY_MM:
@@ -86,7 +93,7 @@ class Moonraker:
                                   f"{self.MAX_LOW_XY_MM} mm limit for moves below Z{self.safe_travel_z}")
         elif low:
             # nozzle is below travel height: lift straight up before moving sideways
-            lines.append(f"G1 Z{self.safe_travel_z:.4f} F{f:.0f}")
+            lines.append(f"G1 Z{travel_z:.4f} F{f:.0f}")
         if xy:
             lines.append(f"G1 {' '.join(xy)} F{f:.0f}")
         if z is not None:
@@ -95,6 +102,14 @@ class Moonraker:
         if len(lines) == 1:
             return
         self.gcode("\n".join(lines + ["M400"]))
+
+    def travel_z_for(self, y_from, y_to):
+        """Height (Z, smaller = higher) the nozzle needs for an X/Y move between these Y values:
+        the travel height, or the feeder-zone height when either end is in the front strip."""
+        z = self.safe_travel_z
+        if self.front_zone_y is not None and self.front_zone_z is not None                 and min(y_from, y_to) < self.front_zone_y:
+            z = self.front_zone_z if z is None else min(z, self.front_zone_z)
+        return z
 
     def move_rel(self, dx=0.0, dy=0.0, dz=0.0, feedrate=None, stay_low=False):
         x, y, z = self.position()

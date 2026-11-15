@@ -77,7 +77,8 @@ def make_mr(cfg):
     m = cfg["moonraker"]
     mc = cfg["machine"]
     return Moonraker(m["url"], m["feedrate_mm_min"], mc["x_range"], mc["y_range"], mc["z_range"],
-                     safe_travel_z=mc.get("safe_travel_z"))
+                     safe_travel_z=mc.get("safe_travel_z"), front_zone_y=mc.get("front_zone_y"),
+                     front_zone_z=mc.get("front_zone_z"))
 
 
 def cmd_check_lens(cfg, a):
