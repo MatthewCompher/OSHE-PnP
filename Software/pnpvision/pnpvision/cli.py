@@ -44,8 +44,20 @@ def open_cam(cfg, role):
 
 def dot_locator(a):
     """Circle finder configured from the --rmin/--rmax/--polarity/--thresh options."""
-    return partial(find_circle, r_min_px=a.rmin, r_max_px=a.rmax,
+    return partial(find_circle, r_min_px=a.rmin, r_max_px=a.rmax, min_circularity=a.circ,
                    polarity=a.polarity, threshold=a.thresh)
+
+
+# The nozzle bore is small (r ~15 px) and a glint or speck at its edge notches it: on 2026-11-14 a
+# clean, steady bore scored 0.76-0.79, so bore searches accept a lower circularity than dots.
+BORE_MIN_CIRC = 0.70
+
+
+def bore_locator(bore):
+    """Circle finder for a tip's bore over the up camera (tips.<name>.bore in machine.json)."""
+    return partial(find_circle, r_min_px=bore.get("rmin", 8), r_max_px=bore.get("rmax", 30),
+                   min_circularity=bore.get("circ", BORE_MIN_CIRC),
+                   polarity=bore.get("polarity", "dark"), threshold=bore.get("thresh", 40))
 
 
 def add_dot_args(p):
@@ -56,6 +68,9 @@ def add_dot_args(p):
     p.add_argument("--thresh", type=float,
                    help="fixed 0-255 black/white cut-off instead of automatic "
                         "(e.g. --polarity bright --thresh 230 for the datum's white dots)")
+    p.add_argument("--circ", type=float, default=0.80,
+                   help="minimum circularity 0-1 (default 0.80; the nozzle bore over the up camera "
+                        f"needs ~{BORE_MIN_CIRC})")
 
 
 def make_mr(cfg):
@@ -94,7 +109,8 @@ def cmd_find_dot(cfg, a):
         img = lens.undistort(cam.fresh(settle_s=cfg["moonraker"]["settle_s"]))
     finally:
         cam.stop()
-    found = find_circles(img, a.rmin, a.rmax, polarity=a.polarity, threshold=a.thresh)
+    found = find_circles(img, a.rmin, a.rmax, min_circularity=a.circ, polarity=a.polarity,
+                         threshold=a.thresh)
     principal = np.array([lens.newK[0, 2], lens.newK[1, 2]])
     mpath = C.rel(cfg, cfg["cameras"][a.cam]["motion_map"])
     motion = MotionMap.load(mpath) if os.path.exists(mpath) else None
@@ -844,8 +860,7 @@ def _run_job(cfg, a, hmi):
             from .servo import center_on
             t = tips[tip]
             bore = t.get("bore", {})
-            locate = partial(find_circle, r_min_px=bore.get("rmin", 8), r_max_px=bore.get("rmax", 30),
-                             polarity=bore.get("polarity", "dark"), threshold=bore.get("thresh", 40))
+            locate = bore_locator(bore)
             old = np.asarray(ms["up_cam_xy_mm"], float)
             mr.move_abs(x=float(old[0]), y=float(old[1]))
             mr.move_abs(z=t["inspect_z"], feedrate=300)
@@ -919,8 +934,7 @@ def cmd_check_machine(cfg, a):
         light = make_light(lc, mr)
         bore = t.get("bore", {})
         up = {"grab": lambda: grab_lit(up_cam, light, up_lens, lc["settle_s"], False, keep_on=True),
-              "locate": partial(find_circle, r_min_px=bore.get("rmin", 8), r_max_px=bore.get("rmax", 30),
-                                polarity=bore.get("polarity", "dark"), threshold=bore.get("thresh", 40)),
+              "locate": bore_locator(bore),
               "motion": MotionMap.load(C.rel(cfg, cfg["cameras"]["up"]["motion_map"])),
               "target_px": (up_lens.newK[0, 2], up_lens.newK[1, 2])}
         found = check_machine(mr, ms, down, up, inspect_z, apply=a.apply)

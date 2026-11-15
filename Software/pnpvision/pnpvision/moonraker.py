@@ -31,10 +31,17 @@ class Moonraker:
         return r.json()["result"]["status"][obj]
 
     def objects(self):
-        """Names of all Klipper objects (config sections), e.g. 'gcode_macro VALVE_ON'."""
+        """Names of all Klipper objects and loaded config sections, e.g. 'gcode_macro VALVE_ON'.
+        objects/list only has objects with a status (it leaves out [manual_stepper ...]), so the
+        section names from configfile.settings are added."""
         r = requests.get(f"{self.url}/printer/objects/list", timeout=10)
         r.raise_for_status()
-        return r.json()["result"]["objects"]
+        names = list(r.json()["result"]["objects"])
+        try:
+            settings = self.query("configfile").get("settings", {})
+        except requests.RequestException:
+            settings = {}
+        return names + [k for k in settings if k not in names]
 
     def query(self, obj):
         """One object's status; for names with spaces, e.g. 'gcode_macro PNP_ANSWER'."""
