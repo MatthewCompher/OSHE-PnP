@@ -887,7 +887,8 @@ def _run_job(cfg, a, hmi):
                           reject_xy=ms.get("reject_bin_xy"), ask=ask, say=say, log=log, retries=a.retries,
                           verify_empty=not a.no_verify, stats=stats,
                           stop_requested=hmi.stop_requested if hmi else None,
-                          z_feeds=cfg.get("run", {}).get("z_feeds"))
+                          z_feeds=cfg.get("run", {}).get("z_feeds"),
+                          show_pick=getattr(a, "show_pick", False))
     except JobError as e:
         raise SystemExit(str(e))
     finally:
@@ -1073,6 +1074,9 @@ def main():
     p.add_argument("--tip", help="tip on the nozzle now (default: current_tip in machine.json)")
     p.add_argument("--retries", type=int, default=3, help="picks per part before asking you")
     p.add_argument("--no-verify", action="store_true", help="skip the empty-nozzle check after placing")
+    p.add_argument("--show-pick", action="store_true",
+                   help="debug, hand-loaded parts: park the down camera over the pick spot before each "
+                        "feed prompt (put the part under the crosshair)")
     p.add_argument("--no-recentre", action="store_true", help="don't re-centre after a tip change")
     p.add_argument("--no-feeders", action="store_true",
                    help="no feeder Nano: servo feeders don't stroke (load parts by hand)")

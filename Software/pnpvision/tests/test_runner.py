@@ -264,3 +264,28 @@ if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
             f(); print("PASS", n)
+
+
+def test_show_pick_parks_down_camera_over_manual_pick_spot():
+    """--show-pick (debug): at each manual feed prompt the DOWN camera is over the pick spot
+    (nozzle pick XY minus the camera offset), and the job still places everything."""
+    job = _job()
+    holder = {}
+    seen = []
+
+    def ask(prompt):
+        if "advance the tape" in prompt and prompt.split()[1] == "F3":
+            seen.append(np.array(holder["w"].xyz[:2]))
+        return holder["w"].manual_advance(prompt)
+
+    bus = SimFeederBus(on_feed=lambda s: holder["w"].on_feed(s))
+    bank = _bank(bus, ask)
+    w = holder["w"] = World(bank.feeders)
+    ms = {"down_cam_offset_mm": OFF.tolist(), "up_cam_xy_mm": UP_XY.tolist()}
+    res = run_job(job, POSE, ms, w, w.up_inspect, Rotator(w.gcode, direction=TRUE_DIR), bank, TIPS,
+                  only={"U1"}, current_tip="N24", reject_xy=BIN, ask=ask, say=lambda *a: None,
+                  clock=lambda: w.t, show_pick=True)
+    f3 = next(f for f in bank.feeders if f.id == "F3")
+    assert seen, "no manual feed prompt"
+    assert np.allclose(seen[0], np.asarray(f3.d["xy"], float) - OFF, atol=1e-6), seen[0]
+    assert [r["status"] for r in res] == ["placed"]

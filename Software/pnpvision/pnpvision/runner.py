@@ -111,11 +111,14 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             current_tip=None, recentre=None, reject_xy=None, ask=input, say=print, log=None,
             pick_press=0.4, place_press=0.3, approach_mm=0.8, vac_ms=300, release_ms=500,
             retries=3, angle_tol_deg=1.0, verify_empty=True, clock=time.monotonic, stats=None,
-            stop_requested=None, z_feeds=None):
+            stop_requested=None, z_feeds=None, show_pick=False):
     """Returns a list of per-placement result dicts. ms: machine state (down_cam_offset_mm,
     up_cam_xy_mm; recentre(tip) may update them in place). up_inspect(body_mm) -> UpCam result.
     stats: a dict, filled with timing_summary(). stop_requested(): checked before each part
-    (the HMI stop button); True = stop cleanly there."""
+    (the HMI stop button); True = stop cleanly there.
+    show_pick (debug, hand-loaded parts only): before each feed prompt, park the DOWN camera over
+    the pick spot so the part can be put under the crosshair in the camera view. Real feeders sit
+    outside the down camera's reach. The detour is not counted as machine time."""
     log = log or (lambda event, ok=None, **d: None)
     zf = {**Z_FEEDS, **(z_feeds or {})}
     steps, problems = plan_job(job, feeders, tips, packages, only)
@@ -206,6 +209,14 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             pick_z = feeder_part_top_z(fd.d, tip, tips) + pick_press
             ins = None
             for attempt in range(1, retries + 1):
+                if show_pick:
+                    t0 = clock()
+                    cam_xy = np.asarray(fd.pick_xy(), float) - off     # camera over the nozzle's pick spot
+                    mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
+                    mr.move_abs(x=float(cam_xy[0]), y=float(cam_xy[1]))
+                    mr.gcode("VISION_LIGHT_ON")
+                    say(f"  down camera over {fd.id}'s pick spot: put the part under the crosshair")
+                    waited[0] += clock() - t0
                 with timed(rec, "feed_wait"):
                     fd.ready()
                 with timed(rec, "pick"):
