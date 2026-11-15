@@ -168,3 +168,73 @@ def test_clearance_changes_warning(window, app, board_copy):
     assert lookalike_warning()                          # 1206 twins are 2.92 mm apart
     window.sidebar.align_clear.setValue(2.5)
     assert not lookalike_warning()
+
+
+def _click_part(window, app, idx, button):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    v = window.view
+    it = v.items_by_index[idx]
+    v.centerOn(it)
+    app.processEvents()
+    pos = v.mapFromScene(it.sceneBoundingRect().center())
+    QTest.mouseClick(v.viewport(), button, Qt.NoModifier, pos)
+    app.processEvents()
+
+
+def test_real_left_click_selects_a_part(window, app, board_copy):
+    """Regression: the alignment layer used to swallow clicks on parts."""
+    from PySide6.QtCore import Qt
+    window.load(board_copy)
+    window.show_plate(1)
+    window.view.zoom_by(4)
+    _click_part(window, app, 5, Qt.LeftButton)
+    assert window.view.items_by_index[5].isSelected()
+    assert window.sidebar.selected_index() == 5
+
+
+def test_right_click_on_a_part_asks_for_its_menu(window, app, board_copy):
+    from PySide6.QtCore import Qt
+    window.load(board_copy)
+    window.show_plate(1)
+    window.view.zoom_by(4)
+    got = []
+    window.view.partMenuRequested.disconnect()
+    window.view.partMenuRequested.connect(lambda i, p: got.append(i))
+    _click_part(window, app, 7, Qt.RightButton)
+    assert got == [7]
+
+
+def test_untick_in_table_excludes_and_saves(window, app, board_copy):
+    from PySide6.QtCore import Qt
+    from pnpslice.project import ProjectSettings
+    window.load(board_copy)
+    window.show_plate(1)
+    window.sidebar.auto_number.setChecked(True)
+    t = window.sidebar.table
+    row = next(r for r in range(t.rowCount()) if t.item(r, 0).text().startswith("SOIC8"))
+    idx = window.sidebar.index_at_row(row)
+    key = window.plates[1].parts[idx].key
+    t.item(row, 0).setCheckState(Qt.Unchecked)
+    assert key in window.project.excluded
+    assert key in ProjectSettings.load(board_copy).excluded
+    assert window.view.items_by_index[idx].excluded
+    assert "(63)" in window.plate_btns[1].text()
+    assert window.sidebar.include_all_btn.isVisibleTo(window.sidebar.widget())
+
+    window.slice_current()
+    assert window.mode == "preview"
+    skip = [p for p in window.sliced[1].placements if p.skip]
+    assert len(skip) == 1 and skip[0].excluded
+
+    window.sidebar.include_all_btn.click()
+    assert not window.project.excluded and "(64)" in window.plate_btns[1].text()
+
+
+def test_exclude_whole_package_from_menu_action(window, app, board_copy):
+    window.load(board_copy)
+    window.show_plate(1)
+    keys = {p.key for p in window.plates[1].parts if p.package.startswith("R_1206")}
+    window.set_excluded(keys, True)          # what the menu's "Exclude all … on this plate" does
+    assert "(34)" in window.plate_btns[1].text()
+    assert sum(it.excluded for it in window.view.items_by_index) == 30

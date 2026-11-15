@@ -160,7 +160,7 @@ def candidates(board: Board, plate: Plate,
         number = p.number or f"#{i + 1}"
         step, job_ref = in_job.get(fp.uuid, (None, fp.ref)) if fp.uuid else (None, fp.ref)
         out.append(AlignCandidate(
-            key=f"{fp.uuid or (fp.ref + '@' + format(fp.x, 'g') + ',' + format(fp.y, 'g'))}/{number}",
+            key=f"{fp.key}/{number}",
             ref=job_ref, pad=p.number, package=fp.package, x=x, y=y,
             angle=frame.angle(p.angle), shape=p.shape, w=p.w, h=p.h,
             roundrect_rratio=p.roundrect_rratio, fiducial=is_fiducial(fp),

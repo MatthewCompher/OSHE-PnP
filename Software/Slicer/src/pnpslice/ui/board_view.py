@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QPainter, QPainterPath, QPen, QPolygonF, QTransform)
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene, QGraphicsView, QStyleOptionGraphicsItem
 
@@ -54,7 +54,9 @@ class PartItem(QGraphicsItem):
         self.part = part
         self.hovered = False
         self.show_label = True
-        self.state = None        # preview: None (prepare) | "placed" | "current" | "pending"
+        self.state = None        # preview: None (prepare) | "placed" | "current" | "pending" | "skip"
+        self.excluded = False    # prepare: un-included by the user
+        self.skipped = False     # preview: in the job with skip
         self.order_no = 0        # preview: 1-based placement number
         self.job_ref = part.ref  # preview: reference as written to the job
         self.setPos(part.x, -part.y)
@@ -84,6 +86,10 @@ class PartItem(QGraphicsItem):
         head = f"#{self.order_no} &nbsp; " if getattr(self, "order_no", 0) else ""
         txt = (f"{head}<b>{p.ref}</b> &nbsp; {p.value}<br>{p.package}<br>"
                f"X {p.x:.3f} &nbsp; Y {p.y:.3f} mm &nbsp; rot {p.rot:g}°")
+        if getattr(self, "excluded", False):
+            txt += f"<br><span style='color:{theme.WARN}'>excluded: in the job with skip, not placed</span>"
+        elif p.dnp:
+            txt += f"<br><span style='color:{theme.WARN}'>do not populate (KiCad): in the job with skip</span>"
         if p.origin_offset > 0.1:
             txt += f"<br><span style='color:{theme.WARN}'>origin is {p.origin_offset:.2f} mm from pad centre</span>"
         return txt
@@ -113,7 +119,7 @@ class PartItem(QGraphicsItem):
     def paint(self, painter: QPainter, option: QStyleOptionGraphicsItem, widget=None):
         lod = option.levelOfDetailFromTransform(painter.worldTransform())  # px per mm
         selected = self.isSelected() or self.state == "current"
-        pending = self.state in ("pending", "skip")
+        pending = self.state in ("pending", "skip") or (self.state is None and (self.excluded or self.part.dnp))
         painter.setPen(Qt.NoPen)
         if self.state in ("placed", "current"):
             painter.setBrush(theme.BODY_CURRENT if self.state == "current" else theme.BODY_PLACED)
@@ -143,8 +149,13 @@ class PartItem(QGraphicsItem):
             painter.drawRect(self._body)
 
         label = self.part.ref if self.state is None else f"#{self.order_no} {self.job_ref}"
-        if self.part.dnp:
-            label += " (skip)" if self.state is not None else " (DNP)"
+        if self.state is not None:
+            if self.skipped:
+                label += " (skip)"
+        elif self.part.dnp:
+            label += " (DNP)"
+        elif self.excluded:
+            label += " (excluded)"
         if self.state == "current":  # always label the part being placed
             painter.save()
             painter.scale(1 / lod, 1 / lod)
@@ -187,6 +198,9 @@ class AlignOverlay(QGraphicsItem):
 
     def boundingRect(self) -> QRectF:
         return self.rect
+
+    def shape(self) -> QPainterPath:
+        return QPainterPath()  # draw-only: never hit by clicks, so parts underneath stay clickable
 
     def _pad_path(self, c) -> QPainterPath:
         p = self._paths.get(c.key)
@@ -302,6 +316,7 @@ class GridItem(QGraphicsItem):
 class BoardView(QGraphicsView):
     partSelected = Signal(int)     # index into plate.parts, -1 = none
     partHovered = Signal(int)
+    partMenuRequested = Signal(int, QPoint)  # right-click (no drag): part index or -1, global position
     alignPadClicked = Signal(str)  # pick mode: candidate key
     alignPadHovered = Signal(str)  # pick mode: candidate key, "" = none
     cursorMoved = Signal(float, float)  # job mm
@@ -319,6 +334,9 @@ class BoardView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMouseTracking(True)
         self.setFrameShape(QGraphicsView.NoFrame)
+        # right button pans when dragged and opens our menu when clicked (see mouseReleaseEvent)
+        self.setContextMenuPolicy(Qt.PreventContextMenu)
+        self.viewport().setContextMenuPolicy(Qt.PreventContextMenu)
         self.plate: Plate | None = None
         self.items_by_index: list[PartItem] = []
         self.grid: GridItem | None = None
@@ -388,6 +406,7 @@ class BoardView(QGraphicsView):
             self._path_item = None
         for it in self.items_by_index:
             it.state = None
+            it.skipped = False
             it.order_no = 0
             it.job_ref = it.part.ref
         if self.align:
@@ -397,6 +416,7 @@ class BoardView(QGraphicsView):
             for n, idx in enumerate(order, start=1):
                 it = self.items_by_index[idx]
                 it.order_no = n
+                it.skipped = idx in self._skips
                 it.job_ref = (refs or {}).get(idx, it.part.ref)
                 it.setToolTip(it.tooltip_text())
             self._path_item = self.scene().addPath(QPainterPath(), _cosmetic(theme.TRAVEL, 1.0))
@@ -454,6 +474,15 @@ class BoardView(QGraphicsView):
                 best, key = d, c.key
         return key
 
+    def set_excluded(self, indices: set[int]):
+        """Grey out parts the user excluded (prepare view)."""
+        for i, it in enumerate(self.items_by_index):
+            ex = i in indices
+            if it.excluded != ex:
+                it.excluded = ex
+                it.setToolTip(it.tooltip_text())
+                it.update()
+
     def set_labels(self, on: bool):
         self._labels = on
         for it in self.items_by_index:
@@ -506,7 +535,7 @@ class BoardView(QGraphicsView):
                 self.alignPadClicked.emit(key)
                 e.accept()
                 return
-        over_part = isinstance(self.itemAt(e.position().toPoint()), PartItem)
+        over_part = self._part_at(e.position().toPoint()) is not None
         if e.button() in (Qt.MiddleButton, Qt.RightButton) or (e.button() == Qt.LeftButton and not over_part):
             self._pan_from = e.position()
             self._pan_moved = False
@@ -541,12 +570,21 @@ class BoardView(QGraphicsView):
             self.viewport().setCursor(Qt.CrossCursor if self.pick_mode else Qt.ArrowCursor)
             if e.button() == Qt.LeftButton and not self._pan_moved:
                 self.scene().clearSelection()  # click on empty board = deselect
+            elif e.button() == Qt.RightButton and not self._pan_moved:
+                it = self._part_at(e.position().toPoint())
+                self.partMenuRequested.emit(it.index if it else -1, e.globalPosition().toPoint())
             e.accept()
             return
         super().mouseReleaseEvent(e)
 
+    def _part_at(self, pos) -> "PartItem | None":
+        for it in self.items(pos):
+            if isinstance(it, PartItem):
+                return it
+        return None
+
     def mouseDoubleClickEvent(self, e):
-        if not isinstance(self.itemAt(e.position().toPoint()), PartItem):
+        if self._part_at(e.position().toPoint()) is None:
             self.fit()
         else:
             super().mouseDoubleClickEvent(e)

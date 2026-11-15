@@ -20,18 +20,19 @@ This guide covers everything the program does. For the file format itself, see
 7. [Moving around the board view](#7-moving-around-the-board-view)
 8. [What the colours and marks mean](#8-what-the-colours-and-marks-mean)
 9. [The Prepare sidebar, section by section](#9-the-prepare-sidebar-section-by-section)
-10. [Part heights](#10-part-heights)
-11. [Alignment pads](#11-alignment-pads)
-12. [Slicing](#12-slicing)
-13. [Preview](#13-preview)
-14. [Exporting the job file](#14-exporting-the-job-file)
-15. [What's in a job file](#15-whats-in-a-job-file)
-16. [The settings file next to your board](#16-the-settings-file-next-to-your-board)
-17. [Problems: every message and how to fix it](#17-problems-every-message-and-how-to-fix-it)
-18. [Command line](#18-command-line)
-19. [A complete job, start to finish](#19-a-complete-job-start-to-finish)
-20. [Troubleshooting](#20-troubleshooting)
-21. [Keyboard and mouse reference](#21-keyboard-and-mouse-reference)
+10. [Excluding parts](#10-excluding-parts)
+11. [Part heights](#11-part-heights)
+12. [Alignment pads](#12-alignment-pads)
+13. [Slicing](#13-slicing)
+14. [Preview](#14-preview)
+15. [Exporting the job file](#15-exporting-the-job-file)
+16. [What's in a job file](#16-whats-in-a-job-file)
+17. [The settings file next to your board](#17-the-settings-file-next-to-your-board)
+18. [Problems: every message and how to fix it](#18-problems-every-message-and-how-to-fix-it)
+19. [Command line](#19-command-line)
+20. [A complete job, start to finish](#20-a-complete-job-start-to-finish)
+21. [Troubleshooting](#21-troubleshooting)
+22. [Keyboard and mouse reference](#22-keyboard-and-mouse-reference)
 
 ---
 
@@ -55,8 +56,9 @@ calibration.
 
 **Only SMD parts are placed.** Through-hole parts are skipped, and so are parts marked
 *Exclude from position files* or *Not in schematic / board only*. Parts marked
-*Do not populate* stay in the job file, flagged to be skipped (see
-[section 15](#15-whats-in-a-job-file)).
+*Do not populate* in KiCad, and parts you **exclude** in pnpslice, stay in the job file
+flagged to be skipped (see [section 10](#10-excluding-parts) and
+[section 16](#16-whats-in-a-job-file)).
 
 ---
 
@@ -166,7 +168,7 @@ since they may be out of date.
 
 If a board can't be opened, a message says why. Common causes are a KiCad 5 file (open
 and save it in KiCad 6 or newer) or an outline with a gap. See
-[section 17](#17-problems-every-message-and-how-to-fix-it).
+[section 18](#18-problems-every-message-and-how-to-fix-it).
 
 ---
 
@@ -211,6 +213,7 @@ KiCad's own page origin and its downward Y axis never appear in pnpslice.
 |---|---|
 | Zoom | **Mouse wheel**, centred on the cursor. Or `+` / `−` with the view focused |
 | Pan | **Drag empty board space** with the left button, or drag **anywhere** with the middle or right button |
+| Part menu | **Right-click** a part (without dragging): exclude or include it, or its whole package ([section 10](#10-excluding-parts)) |
 | Fit the board | **Fit** button, the `F` key, or **double-click** empty space |
 | Part details | **Hover** a part: a tooltip shows reference, value, package, X/Y and rotation, and the status bar repeats it |
 | Select a part | **Click** it. Its row in the Parts table is highlighted |
@@ -234,6 +237,7 @@ against calipers on the real board.
 | Gold shapes | Copper pads |
 | **Orange** pad | **Pin 1**, shown on parts with more than two pads |
 | Small white **+** | The **pick point**: the centre of the part's pads, where the nozzle picks |
+| **Faded** part | Excluded by you, or do-not-populate in KiCad: in the job with `skip`, never placed |
 | Thin line from the + | The part's **rotation**: its library +X direction. Shown when selected or zoomed in |
 | Teal box | The selected part |
 | **Magenta ring** with A, B, C… | An **alignment pad** |
@@ -254,7 +258,7 @@ against calipers on the real board.
 | Dark grey part | Already placed at this step |
 | **Teal** part with `#n REF` | The part placed **at this step** |
 | Faded pads | Not placed yet |
-| `(skip)` | Do-not-populate: in the job, never placed |
+| `(skip)` | Excluded or do-not-populate: in the job, never placed |
 | Thin teal line | The path the nozzle takes between placements |
 | Grey alignment ring | That alignment pad's part has been placed, so the pad is now covered |
 
@@ -270,8 +274,9 @@ the file name to see its full path.
 ### Plate
 
 The side, how many parts it will place, a count per package, and anything **skipped**
-with the reason (through-hole, board-only, excluded from position files). Do-not-populate
-parts are counted separately because they stay in the job.
+with the reason (through-hole, board-only, excluded from position files). Parts you
+excluded and do-not-populate parts are counted separately, because they stay in the job.
+When any are excluded, an **Include all** button appears here.
 
 ### Slice settings
 
@@ -280,15 +285,15 @@ parts are counted separately because they stay in the job.
   - Numbering follows reading order on that plate: rows from top to bottom, then left to right.
   - References that are already unique are left alone. Names that already exist are skipped.
   - Your KiCad file is **not** changed. For real jobs, annotate in KiCad instead.
-- **Edit heights…** opens the heights table (see [section 10](#10-part-heights)). The note
+- **Edit heights…** opens the heights table (see [section 11](#11-part-heights)). The note
   next to it says where the current heights come from.
 - **Order:** lowest parts first, one package at a time, shortest path (see
-  [section 12](#placement-order)).
+  [section 13](#placement-order)).
 
 ### Alignment pads
 
 The pads the camera will use to find the board, with the controls to change them. See
-[section 11](#11-alignment-pads).
+[section 12](#12-alignment-pads).
 
 ### Problems
 
@@ -299,7 +304,7 @@ A live check of the plate, updated whenever anything changes:
 - **✔ Ready to slice** = no errors.
 
 **Click a problem** to jump to the first part it's about. Every message is explained in
-[section 17](#17-problems-every-message-and-how-to-fix-it).
+[section 18](#18-problems-every-message-and-how-to-fix-it).
 
 ### Parts
 
@@ -309,11 +314,60 @@ Every part on this plate: **Ref, Package, X, Y, Rot, H** (height).
 - Type in the filter box to show only matching references, values or packages.
 - Click a row to select the part and centre the view on it.
 - Hover **H** to see where that height came from.
-- Do-not-populate parts are shown as `R5 (DNP)`, greyed.
+- **Untick** a part's box to exclude it, or right-click a row for the part menu
+  ([section 10](#10-excluding-parts)).
+- Do-not-populate parts are shown as `R5 (DNP)`, greyed, with no box.
 
 ---
 
-## 10. Part heights
+## 10. Excluding parts
+
+You can leave parts out of a job without touching KiCad: for example a feeder that isn't
+loaded yet, a part you'll fit by hand, or one you want to test on its own.
+
+**Excluded parts stay in the job file with `"skip": true`.** `JOB_FORMAT.md` describes
+this as "kept for completeness, not placed", so the runner knows about the part and can
+log it, but never picks it. Do-not-populate parts from KiCad are handled exactly the same way.
+
+### How to exclude parts
+
+| Where | How |
+|---|---|
+| **Parts table** | **Untick** the box next to the reference. Tick it again to include the part |
+| **Board view** | **Right-click** a part › **Exclude R12** (or **Include R12**) |
+| **A whole package** | Right-click any part of that package (on the board or in the table) › **Exclude all 23 × R_0805_2012Metric on this plate**. Useful when a whole feeder isn't loaded |
+| **Undo everything on a plate** | Click **Include all (N excluded)** under the Plate section, or right-click › **Include everything on this plate** |
+
+Right-click without moving the mouse to open the menu. Right-click and drag still pans.
+
+### What changes
+
+- Excluded parts are **faded** on the board and labelled `(excluded)` when labels are
+  showing. In the Parts table their box is unticked and the reference is greyed.
+- The **Plate** section and the plate button count only parts that will be placed, for
+  example *56 parts to place (+8 excluded: kept with skip)*.
+- In **Preview** they keep their place in the order, labelled `(skip)`, and the nozzle
+  path goes past them.
+- Their pads are **never covered**, so they become good **alignment pad** candidates.
+- Exclusions are **saved with the board** ([section 17](#17-the-settings-file-next-to-your-board)).
+  They're tied to KiCad's internal ID for each footprint, so they survive reannotating
+  and moving parts. Like any setting, changing them clears the current slice; slice again.
+
+### Rules
+
+- An excluded part still needs a **unique reference**, because every entry in the job
+  file must have one.
+- An excluded part that is **off the board**, or whose package has **no known height**,
+  is simply left out of the file (with a warning) instead of blocking the slice. Every
+  entry in the file must be on the board and have a height.
+- If **every** part on a plate is excluded or do-not-populate, there's nothing to place
+  and slicing is blocked.
+- Do-not-populate parts can't be included from pnpslice; change that in KiCad. Their
+  box is greyed out.
+
+---
+
+## 11. Part heights
 
 The runner needs each part's **height** to work out how far down to place it. pnpslice
 takes each package's height from the first of these that has one:
@@ -342,11 +396,11 @@ the current height, and where that height comes from.
 - Click **OK** to save. Values must be between 0 and 50 mm.
 
 Heights you set are saved in the board's settings file
-([section 16](#16-the-settings-file-next-to-your-board)), so you only enter them once.
+([section 17](#17-the-settings-file-next-to-your-board)), so you only enter them once.
 
 ---
 
-## 11. Alignment pads
+## 12. Alignment pads
 
 Before placing, the machine centres its down-looking camera on each **alignment pad** to
 find exactly where the board is and how it's rotated. pnpslice chooses them automatically,
@@ -415,7 +469,7 @@ warning. The proper fix is to add **fiducials** in KiCad.
 
 ---
 
-## 12. Slicing
+## 13. Slicing
 
 Click **Slice plate** (or press `Ctrl+R`) to slice the **current** plate.
 
@@ -425,7 +479,7 @@ Click **Slice plate** (or press `Ctrl+R`) to slice the **current** plate.
   **Export job…** becomes available.
 
 Slicing is quick; slice again whenever you like. **Changing any setting** (heights,
-auto-numbering, alignment) or **reloading** the board throws away existing slices, so
+auto-numbering, alignment, excluded parts) or **reloading** the board throws away existing slices, so
 you never export something out of date. The status bar reminds you to slice again.
 
 ### Placement order
@@ -444,7 +498,7 @@ On the test board's bottom side, that means all the 0201s first, then 0402, 0603
 
 ---
 
-## 13. Preview
+## 14. Preview
 
 Preview shows the sliced job step by step, like the layer slider in OrcaSlicer.
 
@@ -471,7 +525,7 @@ Click **Prepare** to go back and change things.
 
 ---
 
-## 14. Exporting the job file
+## 15. Exporting the job file
 
 In Preview, click **Export job…** (or press `Ctrl+E`). The save dialog suggests:
 
@@ -488,7 +542,7 @@ JSON, one placement per line) to see the order and values are what you expect.
 
 ---
 
-## 15. What's in a job file
+## 16. What's in a job file
 
 Here's a shortened example from the test board's bottom side:
 
@@ -526,7 +580,7 @@ Here's a shortened example from the test board's bottom side:
 | `board.outline_mm` | The board outline in the board frame, starting at the (0, 0) corner |
 | `alignment[]` | 2–4 pads: `name`, centre `x`/`y`, `shape` (`rect`, `roundrect`, `oval`, `circle`), size `w`/`h` and `rot` (or `d` for circles), and the `ref`/`pad` they belong to. `corner_r` is an extra field giving the corner radius of `roundrect` pads |
 | `placements[]` | In placement order: `ref`, `value`, `package`, `x`/`y` (the pads' centre = pick point), `rot`, `height_mm` |
-| `skip: true` | Do-not-populate: listed but not placed |
+| `skip: true` | Excluded by you, or do-not-populate in KiCad: listed but not placed |
 | `kicad_ref` | Only on auto-numbered parts: the reference in KiCad |
 
 **Not in the file, on purpose:** `feeder` and `nozzle`. The spec says missing means
@@ -534,7 +588,7 @@ Here's a shortened example from the test board's bottom side:
 
 ---
 
-## 16. The settings file next to your board
+## 17. The settings file next to your board
 
 Your choices for a board are saved next to it, as `<board name>.pnpslice.json`, for example:
 
@@ -545,7 +599,8 @@ Your choices for a board are saved next to it, as `<board name>.pnpslice.json`, 
   "auto_number": false,
   "align_count": 3,
   "align_clearance_mm": 3.0,
-  "alignment": {"bottom": ["2f577eea-…/1", "…"]}
+  "alignment": {"bottom": ["2f577eea-…/1", "…"]},
+  "excluded": ["8c1d0e4a-…", "…"]
 }
 ```
 
@@ -560,7 +615,7 @@ Window size and the last board and folders are remembered separately, by Windows
 
 ---
 
-## 17. Problems: every message and how to fix it
+## 18. Problems: every message and how to fix it
 
 ### Errors (block slicing)
 
@@ -568,9 +623,10 @@ Window size and the last board and folders are remembered separately, by Windows
 |---|---|---|
 | *N parts share N reference(s)…* | Parts with the same reference | Annotate in KiCad (*Tools › Geographical Reannotate* in the PCB editor), or tick **Auto-number** for testing |
 | *Unnumbered reference(s): R?…* | Parts never annotated | As above |
-| *Part centre outside the board outline* | A part's pad centre is off the board or in a cut-out | Move the part, or fix the outline in KiCad |
+| *Part centre outside the board outline* | A part's pad centre is off the board or in a cut-out | Move the part, or fix the outline in KiCad, or exclude the part |
 | *No height for package(s)…* | No setting, footprint field or typical height | **Edit heights…**, or add a `Height` field in KiCad |
 | *There are no SMD parts to place on the … side* | Nothing to place on this side | Nothing to do if that's expected; otherwise check the parts have the SMD attribute |
+| *Nothing to place on the … side: every part is excluded or do-not-populate* | You excluded everything | Include some parts (right-click › Include, or **Include all**) |
 | *Fewer than 2 visible copper pads…* | Can't align the board | Pads need a solder-mask opening on this side; add fiducials |
 
 ### Warnings (slicing still works)
@@ -581,8 +637,9 @@ Window size and the last board and folders are remembered separately, by Windows
 | *N package height(s) are typical values…* | Check them in **Edit heights…** |
 | *Within 0.5 mm of the board edge* | A part's centre is very near the edge (rectangular boards only) |
 | *Footprint origin isn't the pad centre for…* | The part is picked at its pad centre, as the spec asks. Check this is the part's middle; it matters for parts with lopsided pads |
-| *Do-not-populate part(s) are in the job with "skip": true* | Information: they're listed but not placed |
-| *Do-not-populate part(s) with no known height were left out* | The spec needs a height for every entry; set one if you want them listed |
+| *Not placed, but kept in the job with "skip": true (… do-not-populate, … excluded by you)* | Information: they're listed but not placed |
+| *Part(s) you won't place have no known height, so they were left out of the job file* | The spec needs a height for every entry; set one if you want them listed |
+| *Part(s) you won't place are off the board, so they were left out of the job file* | Every entry must be on the board, so these aren't listed at all |
 | *Alignment pad(s) … have a look-alike pad closer than 3 mm* | Vision could confuse them: pick other pads, add fiducials, or lower the clearance if the board sits accurately |
 | *The alignment pads are close together or nearly in a line* | Rotation will be less accurate: pick pads further apart |
 | *All alignment pads belong to parts in this job and get covered…* | Fine for a normal run; re-aligning after a stop would need other pads. Fiducials fix this |
@@ -602,7 +659,7 @@ Window size and the last board and folders are remembered separately, by Windows
 
 ---
 
-## 18. Command line
+## 19. Command line
 
 Everything except Preview also works from a terminal. That's useful for scripts, or for
 checking a board quickly.
@@ -626,17 +683,18 @@ If you install the project with `pip install -e .`, you can type `pnpslice` inst
 
 ---
 
-## 19. A complete job, start to finish
+## 20. A complete job, start to finish
 
 1. **In KiCad:** annotate, check the SMD and Do-not-populate attributes, run DRC, and
    ideally add fiducials. Save.
 2. **Open** the board in pnpslice. Look at **Problems** and fix any ✖ errors.
 3. **Plate 1 · Top:**
    1. Check the parts table and the drawing look right.
-   2. **Edit heights…**: confirm or correct the heights.
-   3. Check the **alignment pads**. Prefer green, distinct pads near the corners.
-   4. **Slice plate**. Step through **Preview**, watching the order and the path.
-   5. **Export job…** → `<board>-top.job.json`.
+   2. Exclude anything you won't place this time (untick it, or right-click a package).
+   3. **Edit heights…**: confirm or correct the heights.
+   4. Check the **alignment pads**. Prefer green, distinct pads near the corners.
+   5. **Slice plate**. Step through **Preview**, watching the order and the path.
+   6. **Export job…** → `<board>-top.job.json`.
 4. **Plate 2 · Bottom:** the same steps → `<board>-bottom.job.json`. Compare the
    picture with the real board turned over, especially pin 1 positions.
 5. Give the job files to the runner on the machine.
@@ -645,7 +703,7 @@ If you install the project with `pip install -e .`, you can type `pnpslice` inst
 
 ---
 
-## 20. Troubleshooting
+## 21. Troubleshooting
 
 **The window doesn't open, or an error appears in the terminal**
 - `No module named 'pnpslice.src'`, or an import line containing `src.pnpslice`: VS Code
@@ -684,7 +742,7 @@ all pass on a correct setup. The window tests are skipped if PySide6 isn't insta
 
 ---
 
-## 21. Keyboard and mouse reference
+## 22. Keyboard and mouse reference
 
 ### Anywhere in the window
 
@@ -705,6 +763,7 @@ all pass on a correct setup. The window tests are skipped if PySide6 isn't insta
 | `+` / `−` | Zoom in / out |
 | Click a part | Select it (Prepare) or jump to its step (Preview) |
 | Click a pad (in Pick by hand) | Add or remove it as an alignment pad |
+| Right-click a part (no drag) | Part menu: exclude or include it, or its whole package |
 
 ### Preview
 

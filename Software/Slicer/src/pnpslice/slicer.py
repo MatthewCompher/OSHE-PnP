@@ -46,6 +46,7 @@ class Placement:
     part_index: int     # index into plate.parts
     height: float | None
     height_source: str
+    excluded: bool = False   # un-included in pnpslice (saved per board)
 
     @property
     def original_ref(self) -> str:
@@ -53,8 +54,12 @@ class Placement:
 
     @property
     def skip(self) -> bool:
-        """Do-not-populate: in the job with "skip": true, not placed."""
-        return self.part.dnp
+        """In the job with "skip": true, not placed: do-not-populate in KiCad, or excluded here."""
+        return self.part.dnp or self.excluded
+
+    @property
+    def skip_reason(self) -> str:
+        return "DNP" if self.part.dnp else ("excluded" if self.excluded else "")
 
 
 @dataclass
@@ -148,9 +153,15 @@ def slice_plate(board: Board, plate: Plate, settings: ProjectSettings | None = N
     parts = plate.parts
     issues: list[Issue] = []
 
-    if not plate.placed_parts:
-        what = "only do-not-populate parts" if parts else "no SMD parts"
-        issues.append(Issue("error", f"There are {what} to place on the {plate.side} side."))
+    excluded = {i for i, p in enumerate(parts) if p.key in settings.excluded and not p.dnp}
+    skipped = {i for i, p in enumerate(parts) if p.dnp} | excluded
+    if len(skipped) == len(parts):
+        if parts:
+            msg = (f"Nothing to place on the {plate.side} side: every part is excluded or do-not-populate. "
+                   "Include some parts (right-click › Include).")
+        else:
+            msg = f"There are no SMD parts to place on the {plate.side} side."
+        issues.append(Issue("error", msg))
         return SliceResult(plate, [], issues, {})
 
     # -- references (every ref once, DNP parts included: JOB_FORMAT.md) ---------
@@ -182,9 +193,16 @@ def slice_plate(board: Board, plate: Plate, settings: ProjectSettings | None = N
                                     unnumbered))
 
     # -- positions ------------------------------------------------------------
-    outside = [p.ref for p in parts if not plate.contains(p.x, p.y)]
+    off_board = {i for i, p in enumerate(parts) if not plate.contains(p.x, p.y)}
+    outside = [parts[i].ref for i in sorted(off_board - skipped)]
     if outside:
-        issues.append(Issue("error", f"Part centre outside the board outline: {', '.join(outside)}.", outside))
+        issues.append(Issue("error", f"Part centre outside the board outline: {', '.join(outside)}. "
+                            "Fix it in KiCad, or exclude the part.", outside))
+    skip_off_board = sorted(off_board & skipped)
+    if skip_off_board:  # every entry must lie on the board (JOB_FORMAT.md), so leave these out
+        issues.append(Issue("warning", "Part(s) you won't place are off the board, so they were left out of "
+                            "the job file: " + ", ".join(parts[i].ref for i in skip_off_board) + ".",
+                            [parts[i].ref for i in skip_off_board]))
 
     near_edge = []
     for p in parts:
@@ -207,13 +225,13 @@ def slice_plate(board: Board, plate: Plate, settings: ProjectSettings | None = N
 
     # -- heights --------------------------------------------------------------
     resolved = [resolve_height(p.package, p.footprint.properties, settings.heights) for p in parts]
-    include = list(range(len(parts)))
-    dnp_no_height = [i for i in include if parts[i].dnp and resolved[i][0] is None]
-    if dnp_no_height:
-        include = [i for i in include if i not in dnp_no_height]
-        issues.append(Issue("warning", "Do-not-populate part(s) with no known height were left out of the "
-                            "job: " + ", ".join(parts[i].ref for i in dnp_no_height) + ".",
-                            [parts[i].ref for i in dnp_no_height]))
+    include = [i for i in range(len(parts)) if i not in skip_off_board]
+    skip_no_height = [i for i in include if i in skipped and resolved[i][0] is None]
+    if skip_no_height:
+        include = [i for i in include if i not in skip_no_height]
+        issues.append(Issue("warning", "Part(s) you won't place have no known height, so they were left out of "
+                            "the job file: " + ", ".join(parts[i].ref for i in skip_no_height) + ".",
+                            [parts[i].ref for i in skip_no_height]))
     missing = sorted({parts[i].package for i in include if resolved[i][0] is None})
     if missing:
         issues.append(Issue("error", "No height for package(s): " + ", ".join(missing) +
@@ -224,22 +242,24 @@ def slice_plate(board: Board, plate: Plate, settings: ProjectSettings | None = N
         issues.append(Issue("warning", f"{len(typical)} package height(s) are typical values, not your parts' "
                             "datasheet values. Check them in “Edit heights…”.", typical))
     dnp = [parts[i].ref for i in include if parts[i].dnp]
-    if dnp:
-        issues.append(Issue("warning", f"{len(dnp)} do-not-populate part(s) are in the job with "
-                            f"\"skip\": true (not placed): {', '.join(dnp[:8])}{'…' if len(dnp) > 8 else ''}.",
-                            dnp))
+    exc = [parts[i].ref for i in include if i in excluded]
+    if dnp or exc:
+        bits = ([f"{len(dnp)} do-not-populate"] if dnp else []) + ([f"{len(exc)} excluded by you"] if exc else [])
+        refs = dnp + exc
+        issues.append(Issue("warning", f"Not placed, but kept in the job with \"skip\": true "
+                            f"({', '.join(bits)}): {', '.join(refs[:8])}{'…' if len(refs) > 8 else ''}.", refs))
 
     # -- order ------------------------------------------------------------------
     sub = [parts[i] for i in include]
     order = [include[j] for j in placement_order(sub, [resolved[i][0] for i in include])]
     placements = [
         Placement(order=n, ref=renamed.get(i, parts[i].ref), part=parts[i], part_index=i,
-                  height=resolved[i][0], height_source=resolved[i][1])
+                  height=resolved[i][0], height_source=resolved[i][1], excluded=i in excluded)
         for n, i in enumerate(order, start=1)
     ]
 
     # -- alignment ----------------------------------------------------------------
-    # pads of placed parts get covered from their step on; DNP parts never cover anything
+    # pads of placed parts get covered from their step on; skipped parts never cover anything
     in_job = {pl.part.footprint.uuid: (pl.order, pl.ref) for pl in placements
               if pl.part.footprint.uuid and not pl.skip}
     cands = candidates(board, plate, in_job)

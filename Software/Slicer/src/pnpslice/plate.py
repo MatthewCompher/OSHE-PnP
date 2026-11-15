@@ -2,7 +2,8 @@
 
 This is what the UI draws and what gets sliced into a job file. SMD parts are
 included; do-not-populate SMD parts are included too, marked ``dnp`` (the job
-file keeps them with ``"skip": true``). Everything else is listed as skipped
+file keeps them with ``"skip": true``). Parts you exclude in pnpslice are
+handled the same way (see slicer.py). Everything else is listed as skipped
 with a reason so the UI can show why.
 
 Pick point: JOB_FORMAT.md says x, y should equal the centre of the
@@ -47,6 +48,10 @@ class JobPart:
     origin: Point     # footprint origin, job frame (usually the same point)
     footprint: Footprint = field(repr=False)
     dnp: bool = False  # do not populate: written with "skip": true
+
+    @property
+    def key(self) -> str:
+        return self.footprint.key
 
     @property
     def pad_center(self) -> Point:

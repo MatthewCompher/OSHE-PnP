@@ -98,6 +98,12 @@ class Footprint:
     line: int = 0        # line in the .kicad_pcb (for messages)
 
     @property
+    def key(self) -> str:
+        """Stable id for settings (exclusions, alignment picks): KiCad's uuid, which
+        survives reannotating and moving the part. Falls back to ref@position."""
+        return self.uuid or f"{self.ref}@{self.x:g},{self.y:g}"
+
+    @property
     def package(self) -> str:
         """Footprint name without the library: 'R_0603_1608Metric'."""
         return self.lib_id.split(":", 1)[-1]

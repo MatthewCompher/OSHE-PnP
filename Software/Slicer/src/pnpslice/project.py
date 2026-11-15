@@ -27,6 +27,7 @@ class ProjectSettings:
     align_count: int = DEFAULT_COUNT                          # 2-4 alignment pads
     align_clearance: float = DEFAULT_CLEARANCE_MM             # look-alike pads must be at least this far away
     alignment: dict[str, list[str]] = field(default_factory=dict)  # side -> pad keys picked by hand
+    excluded: set[str] = field(default_factory=set)           # footprint keys you un-included
     path: str | None = None                                   # where it was loaded from / saves to
 
     @classmethod
@@ -64,6 +65,9 @@ class ProjectSettings:
                 s.align_clearance = c
         except (TypeError, ValueError):
             pass
+        ex = data.get("excluded", [])
+        if isinstance(ex, list):
+            s.excluded = {str(k) for k in ex}
         al = data.get("alignment", {})
         if isinstance(al, dict):
             for side in ("top", "bottom"):
@@ -78,7 +82,8 @@ class ProjectSettings:
                 "auto_number": self.auto_number,
                 "align_count": self.align_count,
                 "align_clearance_mm": self.align_clearance,
-                "alignment": {k: v for k, v in sorted(self.alignment.items()) if v}}
+                "alignment": {k: v for k, v in sorted(self.alignment.items()) if v},
+                "excluded": sorted(self.excluded)}
 
     def save(self) -> None:
         if not self.path:
