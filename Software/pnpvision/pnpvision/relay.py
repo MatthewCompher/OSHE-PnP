@@ -1,6 +1,10 @@
 """Run one pnpvision command for a touchscreen / Mainsail button and show its output there.
 
-    python -m pnpvision.relay check-machine --yes
+    python -m pnpvision.relay [--as Button_name] check-machine --yes
+
+--as: the name shown in the console (underscores become spaces), e.g. "Go to bin" for teach-bin --goto.
+Commands that move the machine (MOVING) refuse to start unless VISION_HOME ran since the last
+homing / motors off.
 
 Started in the background by scripts/pnp_cmd.sh (PNP_* macros in Software/Klipper/pnp_hmi.cfg).
 Every output line goes to the Klipper console (RESPOND), errors in red, and to
@@ -15,16 +19,27 @@ from . import config as C
 from .hmi import Hmi
 
 LOCK = "/tmp/pnpvision_run_job.lock"
+MOVING = {"check-machine", "teach-bin", "align-board", "teach-feeder", "calibrate-motion", "datum"}
 
 
 def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     if not args:
         raise SystemExit("usage: python -m pnpvision.relay COMMAND [ARGS...]")
+    label = None
+    if args[0] == "--as" and len(args) > 2:
+        label, args = args[1].replace("_", " "), args[2:]
     cfg = C.load("config.toml")
     from .cli import make_mr
-    hmi = Hmi(make_mr(cfg), echo=lambda *a: None)
-    name = args[0]
+    from .hmi import homing_problem
+    mr = make_mr(cfg)
+    hmi = Hmi(mr, echo=lambda *a: None)
+    name = label or args[0]
+    if args[0] in MOVING:
+        prob = homing_problem(mr)
+        if prob:
+            hmi.error(f"{name}: {prob[1]}")
+            return 1
     lock = None
     try:
         import fcntl

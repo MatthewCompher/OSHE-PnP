@@ -351,6 +351,10 @@ def _home(cfg, a):
 
         out = visual_home(grab, locate, motion, target, mr.move_abs, mr.position, set_xy,
                           vh["xy"], home=home)
+        try:                                        # jobs and buttons check this (pnp_hmi.cfg)
+            mr.gcode("SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=vision_homed VALUE=1")
+        except Exception:
+            pass
         d = locate(grab())                          # check: no move, dot should sit on target
         check = "check: dot not found"
         if d is not None:
@@ -788,6 +792,8 @@ def cmd_run_job(cfg, a):
     from .hmi import Hmi
     hmi = Hmi(make_mr(cfg))
     lock = None
+    owner = False                         # this process holds the job: it closes the job page
+    ok = False
     try:
         try:
             import fcntl
@@ -796,13 +802,18 @@ def cmd_run_job(cfg, a):
         except ImportError:
             pass
         except OSError:
-            raise SystemExit("a job is already running (PNP_STOP to end it)")
+            raise SystemExit("a job is already running (Stop job to end it)")
+        owner = True
         hmi.start()
-        return _run_job(cfg, a, hmi)
+        res = _run_job(cfg, a, hmi)
+        ok = not hmi.stop_requested()
+        return res
     except BaseException as e:            # SystemExit too: those carry the useful message
         hmi.error(f"RUN_JOB failed: {e}")
         raise
     finally:
+        if owner:
+            hmi.end_job(ok, "Job done" if ok else "Job stopped")
         if lock is not None:
             lock.close()
 
@@ -820,6 +831,23 @@ def _run_job(cfg, a, hmi):
         raise SystemExit(f"{a.job}: not an oshe-pnp-job/1 file")
     ms_path = C.rel(cfg, "calibration/machine.json")
     ms = MS.load(ms_path)
+    from .hmi import homing_problem
+    mr0 = make_mr(cfg)
+    if homing_problem(mr0):
+        # not homed, or homed without VISION_HOME since (motors off / plain G28): every taught
+        # position would be off by up to ~2 mm, so home visually first, then go on
+        from types import SimpleNamespace
+        back = mr0.position()[:2] if a.align and mr0.is_homed() else None   # camera on pad A
+        say("Vision home first (the machine frame isn't set since the last homing / motors off)...")
+        try:
+            say("Vision home: " + _home(cfg, SimpleNamespace(teach=False, no_g28=False)))
+        except BaseException as e:
+            raise SystemExit(f"Vision home failed, job not started: {e}")
+        prob = homing_problem(mr0)
+        if prob:
+            raise SystemExit(f"job not started: {prob[1]}")
+        if back is not None:              # frame moved < ~2 mm: align-board's 3 mm search still finds pad A
+            mr0.move_abs(x=float(back[0]), y=float(back[1]))
     if a.align:
         from types import SimpleNamespace
         rot = a.rot
@@ -854,7 +882,8 @@ def _run_job(cfg, a, hmi):
                 cv2.drawMarker(img, principal, (0, 255, 255), cv2.MARKER_CROSS, 80, 2)
                 cv2.imwrite(os.path.join(img_dir, name + ".png"), img)
             dry_run(job, pose, look, packages, only, say=say,
-                    stop_requested=hmi.stop_requested if hmi else None)
+                    stop_requested=hmi.stop_requested if hmi else None,
+                    progress=hmi.progress if hmi else None)
         finally:
             cam.stop()
         say(f"dry run done; photos (crosshair = where each part's centre goes) in {img_dir}/")
@@ -928,7 +957,8 @@ def _run_job(cfg, a, hmi):
                           verify_empty=not a.no_verify, stats=stats,
                           stop_requested=hmi.stop_requested if hmi else None,
                           z_feeds=cfg.get("run", {}).get("z_feeds"),
-                          show_pick=getattr(a, "show_pick", False))
+                          show_pick=getattr(a, "show_pick", False),
+                          progress=hmi.progress if hmi else None)
     except JobError as e:
         raise SystemExit(str(e))
     finally:
@@ -1007,7 +1037,9 @@ def cmd_make_launchers(cfg, a):
             path = os.path.join(a.gcodes, f"PNP_{name}{suffix}.gcode")
             with open(path, "w") as f:
                 f.write(f"; pnpvision launcher for jobs/{stem}.job.json ({what})\n"
-                        f"RUN_JOB JOB={name}{flag}{extra}\n")
+                        f"; _PNP_HOLD pauses this 'print' while the job runs, so the touchscreen shows\n"
+                        f"; the job page (Resume = continue a dialog, Cancel = stop the job)\n"
+                        f"RUN_JOB JOB={name}{flag}{extra}\n" + "_PNP_HOLD\n" * 3)
             print("wrote", path)
 
 

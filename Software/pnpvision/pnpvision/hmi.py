@@ -15,6 +15,22 @@ The macros only bump counters in their own variables; this side polls them throu
 import time
 
 MACRO = "gcode_macro PNP_ANSWER"
+STATE = "gcode_macro _PNP_STATE"        # vision_homed, job_running (pnp_hmi.cfg)
+
+
+def homing_problem(mr):
+    """None if the machine is homed AND VISION_HOME ran since the last X/Y homing / motors off;
+    else (hard, text). hard = not homed at all (moves would fail)."""
+    try:
+        if not mr.is_homed():
+            return True, "the machine is not homed (motors were off?): run Vision home first"
+        st = mr.query(STATE)
+    except Exception:
+        return None                              # can't tell (no Moonraker / old config): don't block
+    if "vision_homed" in st and not int(st["vision_homed"]):
+        return False, ("homed, but not with Vision home since the last homing: positions can be "
+                       "~2 mm off. Run Vision home first")
+    return None
 
 
 def _clean(text, n=200):
@@ -60,6 +76,34 @@ class Hmi:
         for line in str(text).splitlines()[:6]:
             if line.strip():
                 self._respond(line, error=True)
+
+    def progress(self, n, total, ref, placed=None):
+        """Job page on the touchscreen: 'Layer n / total' and the status line show the part."""
+        msg = f"Part {n}/{total}: {ref}" + (f", {placed} placed" if placed is not None else "")
+        for g in (f"SET_PRINT_STATS_INFO TOTAL_LAYER={int(total)} CURRENT_LAYER={int(n)}",
+                  f"M117 {_clean(msg, 60)}"):
+            try:
+                self.mr.gcode(g)
+            except Exception as e:
+                self.echo(f"(hmi: {e})")
+
+    def end_job(self, ok, summary=""):
+        """Job over: clear job_running and close the launcher's paused 'print' (complete if ok,
+        cancelled otherwise) without moving: the pause position is re-saved here first."""
+        cmds = ["SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE=0"]
+        if summary:
+            cmds.append(f"M117 {_clean(summary, 60)}")
+        try:
+            state = self.mr.query("print_stats").get("state")
+        except Exception:
+            state = None
+        if state == "paused":
+            cmds += ["SAVE_GCODE_STATE NAME=PAUSE_STATE\nRESUME_BASE"] if ok else ["CANCEL_PRINT_BASE"]
+        for g in cmds:
+            try:
+                self.mr.gcode(g)
+            except Exception as e:
+                self.echo(f"(hmi: {e})")
 
     def stop_requested(self):
         try:

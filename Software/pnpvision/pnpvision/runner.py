@@ -111,7 +111,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             current_tip=None, recentre=None, reject_xy=None, ask=input, say=print, log=None,
             pick_press=0.4, place_press=0.3, approach_mm=0.8, vac_ms=300, release_ms=500,
             retries=3, angle_tol_deg=1.0, verify_empty=True, clock=time.monotonic, stats=None,
-            stop_requested=None, z_feeds=None, show_pick=False):
+            stop_requested=None, z_feeds=None, show_pick=False, progress=None):
     """Returns a list of per-placement result dicts. ms: machine state (down_cam_offset_mm,
     up_cam_xy_mm; recentre(tip) may update them in place). up_inspect(body_mm) -> UpCam result.
     stats: a dict, filled with timing_summary(). stop_requested(): checked before each part
@@ -198,6 +198,8 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             rec = {"ref": p["ref"], "package": p["package"], "tip": tip, "feeder": fd.id, "t": {}}
             results.append(rec)
             say(f"\n[{n}/{len(steps)}] {p['ref']} {p.get('value', '')} ({p['package']}) from {fd.id}, tip {tip}")
+            if progress is not None:          # touchscreen job page: part n of total
+                progress(n, len(steps), p["ref"], sum(r.get("status") == "placed" for r in results[:-1]))
             if tip != current_tip:
                 with timed(rec, "tip"):
                     mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
@@ -332,7 +334,8 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
     return results
 
 
-def dry_run(job, pose, look, packages=None, only=None, say=print, stop_requested=None):
+def dry_run(job, pose, look, packages=None, only=None, say=print, stop_requested=None,
+            progress=None):
     """No parts: centre the down camera over every placement (look(xy, name) takes a photo).
     stop_requested(): checked before each placement (PNP_STOP on the touchscreen)."""
     steps, _ = plan_job(job, None, {}, packages, only, need_feeders=False)
@@ -341,6 +344,8 @@ def dry_run(job, pose, look, packages=None, only=None, say=print, stop_requested
             say(f"stop requested: dry run ended before {n}/{len(steps)}")
             break
         p = s["p"]
+        if progress is not None:
+            progress(n, len(steps), p["ref"])
         xy = pose.to_machine([p["x"], p["y"]])
         say(f"[{n}/{len(steps)}] {p['ref']} ({p['package']}, rot {p['rot']}, tip {s['tip']}): "
             f"{np.round(xy, 3).tolist()}, machine angle {pose.part_angle(p['rot']):.1f}")

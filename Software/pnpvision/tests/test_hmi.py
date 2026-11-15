@@ -131,3 +131,53 @@ if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):
             f(); print("PASS", n)
+
+
+class FakeState:
+    """Klipper objects for the job page / homing checks."""
+
+    def __init__(self, homed="xyz", vision_homed=1, print_state="paused"):
+        self.homed, self.vh, self.ps = homed, vision_homed, print_state
+        self.sent = []
+
+    def gcode(self, script):
+        self.sent.append(script)
+
+    def is_homed(self, axes="xyz"):
+        return all(a in self.homed for a in axes)
+
+    def query(self, obj):
+        if obj == "gcode_macro _PNP_STATE":
+            return {"vision_homed": self.vh, "job_running": 1}
+        if obj == "print_stats":
+            return {"state": self.ps}
+        return {}
+
+
+def test_progress_sets_layer_and_status_line():
+    k = FakeState()
+    _hmi(k).progress(3, 12, "R0805_18", placed=2)
+    assert "SET_PRINT_STATS_INFO TOTAL_LAYER=12 CURRENT_LAYER=3" in k.sent
+    assert any(s.startswith("M117 Part 3/12: R0805_18, 2 placed") for s in k.sent), k.sent
+
+
+def test_end_job_completes_paused_launcher_without_moving():
+    k = FakeState(print_state="paused")
+    _hmi(k).end_job(True, "Job done")
+    assert k.sent[0] == "SET_GCODE_VARIABLE MACRO=_PNP_STATE VARIABLE=job_running VALUE=0"
+    assert "SAVE_GCODE_STATE NAME=PAUSE_STATE\nRESUME_BASE" in k.sent      # re-save first: no move back
+    k = FakeState(print_state="paused")
+    _hmi(k).end_job(False)
+    assert "CANCEL_PRINT_BASE" in k.sent and not any("RESUME" in s for s in k.sent)
+    k = FakeState(print_state="standby")                                   # started from the console
+    _hmi(k).end_job(True)
+    assert not any("RESUME" in s or "CANCEL" in s for s in k.sent)
+
+
+def test_homing_problem():
+    from pnpvision.hmi import homing_problem
+    assert homing_problem(FakeState()) is None
+    hard, text = homing_problem(FakeState(homed=""))
+    assert hard and "not homed" in text
+    hard, text = homing_problem(FakeState(vision_homed=0))
+    assert not hard and "Vision home" in text
