@@ -31,8 +31,13 @@ REQUIRED_OBJECTS = {
 
 # thresholds
 DOT_OK_MM = 0.05          # homing dot vs crosshair right after VISION_HOME
-MAP_SCALE_OK = 0.03       # 3 % scale error
-MAP_ANGLE_OK_DEG = 1.0
+# Camera-map limits (scale error, angle error). Set from the first real runs (2026-11-14), with the
+# cameras untouched and align-board confirming the down map (board scale 1.0018):
+#  - down: read 2.9-3.7 % / 0.1-0.5 deg, because it is checked on the datum dot, ~0.5 mm off the
+#    PCB-top height the map was made at (~9 % scale per mm of height on this short lens);
+#  - up: read 2.1-4.4 % / 1.2-1.6 deg with a 0.5 mm jog (a 19 px move: half a pixel of noise on
+#    the bore is ~3 %); now jogged 1.0 mm. A turned or refocused camera shows far more than this.
+MAP_LIMITS = {"down": (0.06, 1.5), "up": (0.07, 3.0)}
 NOZZLE_OK_MM = 0.03       # up-camera centre shift that needs no update
 
 
@@ -63,7 +68,7 @@ def check_klipper(objects):
     return Finding("OK", "printer.cfg", "all pnpvision sections present")
 
 
-def _map_check(what, grab, locate, move_rel, motion, step_mm, redo):
+def _map_check(what, grab, locate, move_rel, motion, step_mm, redo, limits):
     d0 = locate(grab())
     if d0 is None:
         return Finding("WARN", what, "feature lost before the map check")
@@ -78,7 +83,7 @@ def _map_check(what, grab, locate, move_rel, motion, step_mm, redo):
         worst_s = max(worst_s, abs(sc), key=abs)
         worst_a = max(worst_a, abs(an), key=abs)
     txt = f"scale off {worst_s * 100:.1f} %, angle off {worst_a:.2f} deg"
-    if worst_s > MAP_SCALE_OK or worst_a > MAP_ANGLE_OK_DEG:
+    if abs(worst_s) > limits[0] or abs(worst_a) > limits[1]:
         return Finding("REDO", what, txt + " -> camera turned or refocused: " + redo)
     return Finding("OK", what, txt)
 
@@ -118,7 +123,7 @@ def check_machine(mr, ms, down, up, inspect_z, apply=False, say=print):
             else:
                 add(Finding("OK", "homing", f"dot {e:.3f} mm from the crosshair"))
             add(_map_check("down camera map", down["grab"], down["locate"], mr.move_rel, down["motion"], 1.0,
-                           "calibrate-motion --cam down, then calibrate-offset/place-test offset (rows 4, 7, 7b)"))
+                           "calibrate-motion --cam down, then calibrate-offset/place-test offset (rows 4, 7, 7b)", MAP_LIMITS["down"]))
 
     # -- up camera on the empty nozzle's bore --------------------------------------------------
     old = np.asarray(ms["up_cam_xy_mm"], float)
@@ -145,8 +150,8 @@ def check_machine(mr, ms, down, up, inspect_z, apply=False, say=print):
             else:
                 add(Finding("REDO", "nozzle", f"tip moved {np.round(shift, 3).tolist()} mm (refitted?): "
                             "re-run with --apply to update the centre and offset"))
-            add(_map_check("up camera map", up["grab"], up["locate"], move_low, up["motion"], 0.5,
-                           "calibrate-motion --cam up --step 1 (row 8), then the centre again (row 8b)"))
+            add(_map_check("up camera map", up["grab"], up["locate"], move_low, up["motion"], 1.0,
+                           "calibrate-motion --cam up --step 1 (row 8), then the centre again (row 8b)", MAP_LIMITS["up"]))
     finally:
         lift(mr, feedrate=600)
     return out
