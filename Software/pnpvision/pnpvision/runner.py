@@ -332,10 +332,14 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
     return results
 
 
-def dry_run(job, pose, look, packages=None, only=None, say=print):
-    """No parts: centre the down camera over every placement (look(xy, name) takes a photo)."""
+def dry_run(job, pose, look, packages=None, only=None, say=print, stop_requested=None):
+    """No parts: centre the down camera over every placement (look(xy, name) takes a photo).
+    stop_requested(): checked before each placement (PNP_STOP on the touchscreen)."""
     steps, _ = plan_job(job, None, {}, packages, only, need_feeders=False)
     for n, s in enumerate(steps, 1):
+        if stop_requested is not None and stop_requested():
+            say(f"stop requested: dry run ended before {n}/{len(steps)}")
+            break
         p = s["p"]
         xy = pose.to_machine([p["x"], p["y"]])
         say(f"[{n}/{len(steps)}] {p['ref']} ({p['package']}, rot {p['rot']}, tip {s['tip']}): "

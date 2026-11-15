@@ -853,10 +853,11 @@ def _run_job(cfg, a, hmi):
                 img = lens.undistort(cam.fresh(settle_s=cfg["moonraker"]["settle_s"]))
                 cv2.drawMarker(img, principal, (0, 255, 255), cv2.MARKER_CROSS, 80, 2)
                 cv2.imwrite(os.path.join(img_dir, name + ".png"), img)
-            dry_run(job, pose, look, packages, only)
+            dry_run(job, pose, look, packages, only, say=say,
+                    stop_requested=hmi.stop_requested if hmi else None)
         finally:
             cam.stop()
-        print(f"dry run done; photos (crosshair = where each part's centre goes) in {img_dir}/")
+        say(f"dry run done; photos (crosshair = where each part's centre goes) in {img_dir}/")
         return
     tips = ms.get("tips") or {}
     bus = _feeder_bus(cfg, sim=a.no_feeders)
@@ -1001,12 +1002,24 @@ def cmd_make_launchers(cfg, a):
     for stem in jobs:
         name = stem.replace(" ", "_")
         for suffix, flag, what in (("", "", "uses the last board alignment"),
-                                   ("_ALIGN", " ALIGN=1", "aligns the board first: down camera on pad A")):
+                                   ("_ALIGN", " ALIGN=1", "aligns the board first: down camera on pad A"),
+                                   ("_DRYRUN", " DRY_RUN=1", "no parts: down camera visits every placement")):
             path = os.path.join(a.gcodes, f"PNP_{name}{suffix}.gcode")
             with open(path, "w") as f:
                 f.write(f"; pnpvision launcher for jobs/{stem}.job.json ({what})\n"
                         f"RUN_JOB JOB={name}{flag}{extra}\n")
             print("wrote", path)
+
+
+def cmd_hmi_test(cfg, a):
+    """Shows one dialog on the touchscreen / Mainsail and reports which button was tapped.
+    Nothing moves: for checking that action:prompt dialogs work on this screen."""
+    from .hmi import Hmi
+    hmi = Hmi(make_mr(cfg), title="PnP screen test")
+    hmi.start()
+    hmi.say("hmi-test: a dialog should open now")
+    ans = hmi.ask("Screen test: nothing moves. Did this dialog show up? [y/N]")
+    hmi.say(f"hmi-test: you tapped {'Yes' if ans == 'y' else 'No'}; dialogs work")
 
 
 def cmd_set_offset(cfg, a):
@@ -1142,6 +1155,7 @@ def main():
     p.add_argument("--value", help="only parts with this value (default: any)")
     p.add_argument("--tape-angle", type=float,
                    help="machine angle of the part's rot-0 orientation in the pocket (parts with a pin 1)")
+    p = sub.add_parser("hmi-test", help="show a test dialog on the touchscreen (nothing moves)")
     p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it (overrides the plate-layout default)")
     p.add_argument("--goto", action="store_true", help="move the nozzle over the bin in use (taught or default), save nothing")
     p.add_argument("--default", action="store_true", help="forget the taught bin, use the plate-layout default (and go there)")
@@ -1165,7 +1179,7 @@ def main():
     cfg = C.load(a.config)
     {"check-lens": cmd_check_lens, "snapshot": cmd_snapshot, "find-dot": cmd_find_dot, "focus-sweep": cmd_focus_sweep, "place-test": cmd_place_test,
      "set-offset": cmd_set_offset, "check-machine": cmd_check_machine, "make-launchers": cmd_make_launchers, "align-board": cmd_align_board, "run-job": cmd_run_job,
-     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "feed": cmd_feed,
+     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed,
      "calibrate-motion": cmd_calibrate_motion, "calibrate-offset": cmd_calibrate_offset, "datum": cmd_datum,
      "repeatability": cmd_repeatability, "home": cmd_home,
      "light-test": cmd_light_test, "inspect-up": cmd_inspect_up}[a.cmd](cfg, a)
