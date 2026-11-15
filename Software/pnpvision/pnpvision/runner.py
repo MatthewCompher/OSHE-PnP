@@ -296,7 +296,9 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                 f"{target % 180:.1f} mod 180)")
             if verify_empty:
                 with timed(rec, "verify"):
-                    chk = look_up(tip, None)
+                    # look for THIS part's size: with no size the 6 mm search found the round
+                    # 7.4 mm tip collar (a circle fills 0.785 of its box) and called it a part (2026-11-14)
+                    chk = look_up(tip, pkg["body_mm"])
                     mr.move_abs(z=mr.safe_travel_z, feedrate=zf["lift"])
                 if chk.get("ok") or "offset_mm" in chk:
                     rec["status"] = "still on the nozzle after placing"
