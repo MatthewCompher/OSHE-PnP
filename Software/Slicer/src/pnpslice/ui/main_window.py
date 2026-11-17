@@ -13,10 +13,10 @@ import os
 from collections import Counter
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QAction, QColor, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QCursor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QCheckBox, QDialog,
                                QDialogButtonBox, QDoubleSpinBox, QFileDialog, QGridLayout, QHBoxLayout,
-                               QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow,
+                               QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMenu,
                                QMessageBox, QPushButton, QScrollArea, QSlider, QSpinBox, QSplitter, QStackedWidget,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
@@ -108,6 +108,10 @@ class PrepareSidebar(QScrollArea):
         self.plate_info.setWordWrap(True)
         self.plate_info.setTextFormat(Qt.RichText)
         lay.addWidget(self.plate_info)
+        self.include_all_btn = QPushButton("Include all")
+        self.include_all_btn.setToolTip("Put every part you excluded on this plate back in the job")
+        self.include_all_btn.hide()
+        lay.addWidget(self.include_all_btn, 0, Qt.AlignLeft)
 
         # Slice settings
         lay.addWidget(_label("Slice settings", "section"))
@@ -183,8 +187,10 @@ class PrepareSidebar(QScrollArea):
         self.table = _table(["Ref", "Package", "X", "Y", "Rot", "H"], 1)
         self.table.setSortingEnabled(True)
         self.table.setMinimumHeight(280)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         lay.addWidget(self.table, 1)
-        hint = _label("X / Y in mm from the board's lower-left corner, as seen from this side. "
+        hint = _label("Untick a part (or right-click it here or on the board) to exclude it. "
+                      "X / Y in mm from the board's lower-left corner, as seen from this side. "
                       "Rot in degrees, counter-clockwise. H = height in mm.", "hint")
         hint.setWordWrap(True)
         lay.addWidget(hint)
@@ -206,15 +212,22 @@ class PrepareSidebar(QScrollArea):
 
     def show_plate(self, board: Board, plate: Plate, check: SliceResult, settings: ProjectSettings):
         side = "top, looking down" if plate.side == "top" else "bottom, seen from below (mirrored)"
-        n_dnp = len(plate.parts) - len(plate.placed_parts)
+        excluded = {p.key for p in plate.parts if p.key in settings.excluded and not p.dnp}
+        to_place = [p for p in plate.parts if not p.dnp and p.key not in excluded]
+        n_dnp = sum(1 for p in plate.parts if p.dnp)
+        extra = [f"{len(excluded)} excluded"] if excluded else []
+        extra += [f"{n_dnp} do-not-populate"] if n_dnp else []
         lines = [f"<b>{plate.title}</b> &nbsp;<span style='color:{theme.TEXT_DIM}'>{side}</span>",
-                 f"{len(plate.placed_parts)} parts to place"
-                 + (f" (+{n_dnp} do-not-populate, kept with skip)" if n_dnp else "")]
-        for pkg, n in plate.package_counts().items():
+                 f"{len(to_place)} parts to place"
+                 + (f" <span style='color:{theme.WARN}'>(+{', '.join(extra)}: kept with skip)</span>"
+                    if extra else "")]
+        for pkg, n in sorted(Counter(p.package for p in to_place).items()):
             lines.append(f"&nbsp;&nbsp;{n} × {pkg}")
         for why, n in plate.skipped_counts().items():
             lines.append(f"<span style='color:{theme.TEXT_DIM}'>skipped {n}: {why}</span>")
         self.plate_info.setText("<br>".join(lines))
+        self.include_all_btn.setVisible(bool(excluded))
+        self.include_all_btn.setText(f"Include all ({len(excluded)} excluded)")
 
         self.auto_number.blockSignals(True)
         self.auto_number.setChecked(settings.auto_number)
@@ -227,14 +240,23 @@ class PrepareSidebar(QScrollArea):
         self.show_alignment(check, settings)
 
         heights = {pl.part_index: pl for pl in check.placements}
+        self.table.blockSignals(True)
         self.table.setSortingEnabled(False)
         self.table.setRowCount(len(plate.parts))
         for row, p in enumerate(plate.parts):
             ref = QTableWidgetItem(p.ref + (" (DNP)" if p.dnp else ""))
             ref.setData(Qt.UserRole, row)
-            ref.setToolTip(f"{p.ref}  {p.value}" + ("  — do not populate: in the job with skip" if p.dnp else ""))
             if p.dnp:
+                ref.setFlags(ref.flags() & ~Qt.ItemIsUserCheckable)
+                ref.setToolTip(f"{p.ref}  {p.value}  — do not populate in KiCad: in the job with skip")
                 ref.setForeground(QColor(theme.TEXT_DIM))
+            else:
+                ref.setFlags(ref.flags() | Qt.ItemIsUserCheckable)
+                ex = p.key in excluded
+                ref.setCheckState(Qt.Unchecked if ex else Qt.Checked)
+                ref.setToolTip(f"{p.ref}  {p.value}  — untick to exclude (kept in the job with skip)")
+                if ex:
+                    ref.setForeground(QColor(theme.TEXT_DIM))
             self.table.setItem(row, 0, ref)
             pk = QTableWidgetItem(p.package)
             pk.setToolTip(p.package)
@@ -248,6 +270,7 @@ class PrepareSidebar(QScrollArea):
                 h.setToolTip(f"from {SOURCE_LABELS[pl.height_source]}")
             self.table.setItem(row, 5, h)
         self.table.setSortingEnabled(True)
+        self.table.blockSignals(False)
         self._apply_filter(self.filter.text())
 
     def show_alignment(self, check: SliceResult, settings: ProjectSettings):
@@ -304,6 +327,10 @@ class PrepareSidebar(QScrollArea):
                 self.table.scrollToItem(it, QAbstractItemView.PositionAtCenter)
                 break
         self.table.blockSignals(False)
+
+    def index_at_row(self, row: int) -> int:
+        it = self.table.item(row, 0)
+        return it.data(Qt.UserRole) if it else -1
 
     def selected_index(self) -> int:
         rows = self.table.selectionModel().selectedRows()
@@ -555,6 +582,10 @@ class MainWindow(QMainWindow):
         self.sidebar.pick_btn.toggled.connect(self._on_pick_mode)
         self.sidebar.auto_btn.clicked.connect(self._on_align_auto)
         self.view.alignPadClicked.connect(self._on_align_pad_clicked)
+        self.view.partMenuRequested.connect(self._part_menu)
+        self.sidebar.table.itemChanged.connect(self._on_part_check)
+        self.sidebar.table.customContextMenuRequested.connect(self._on_table_menu)
+        self.sidebar.include_all_btn.clicked.connect(self._include_all)
         self.view.alignPadHovered.connect(self._on_align_pad_hovered)
 
         for keys, slot in ((QKeySequence.Open, self.open_dialog), ("F5", self.reload),
@@ -680,7 +711,8 @@ class MainWindow(QMainWindow):
             if i < len(self.plates):
                 p = self.plates[i]
                 mark = " ✓" if i in self.sliced else ""
-                b.setText(f"{p.title}  ({len(p.parts)}){mark}")
+                n = sum(1 for q in p.parts if not q.dnp and q.key not in self.project.excluded)
+                b.setText(f"{p.title}  ({n}){mark}")
                 b.setEnabled(True)
             else:
                 b.setText(("Plate 1 · Top", "Plate 2 · Bottom")[i])
@@ -771,6 +803,8 @@ class MainWindow(QMainWindow):
         self.view.set_labels(self.btn_labels.isChecked())
         self.view.set_grid(self.btn_grid.isChecked())
         self.sidebar.show_plate(self.board, plate, self.checks[idx], self.project)
+        self.view.set_excluded({i for i, p in enumerate(plate.parts)
+                                if p.key in self.project.excluded and not p.dnp})
         self._show_alignment()
         self.view_note.setText("Seen from below: mirrored compared with KiCad's view"
                                if plate.side == "bottom" else "")
@@ -833,8 +867,10 @@ class MainWindow(QMainWindow):
         self.mode = "preview"
         self._set_plate_buttons()
         self._apply_mode()
-        self.statusBar().showMessage(f"{plate.title}: {len(res.placements)} placements. "
-                                     "Step through them with the slider, then Export job…", 6000)
+        n_skip = sum(1 for p in res.placements if p.skip)
+        self.statusBar().showMessage(f"{plate.title}: {len(res.placements) - n_skip} placements"
+                                     + (f" (+{n_skip} skip)" if n_skip else "")
+                                     + ". Step through them with the slider, then Export job…", 6000)
 
     def export_current(self):
         res = self.sliced.get(self.plate_idx)
@@ -867,6 +903,68 @@ class MainWindow(QMainWindow):
             return
         self.project.auto_number = on
         self._settings_changed()
+
+    # ---- excluding parts ----------------------------------------------------------
+    def set_excluded(self, keys, exclude: bool):
+        """Exclude (or include again) parts by footprint key; saved per board."""
+        keys = set(keys)
+        before = set(self.project.excluded)
+        if exclude:
+            self.project.excluded |= keys
+        else:
+            self.project.excluded -= keys
+        if self.project.excluded != before:
+            self._settings_changed()
+
+    def _include_all(self):
+        if self.plates:
+            self.set_excluded({p.key for p in self.plates[self.plate_idx].parts}, False)
+
+    def _on_part_check(self, item: QTableWidgetItem):
+        if item.column() != 0 or not (item.flags() & Qt.ItemIsUserCheckable) or not self.plates:
+            return
+        part = self.plates[self.plate_idx].parts[item.data(Qt.UserRole)]
+        want_excluded = item.checkState() == Qt.Unchecked
+        if want_excluded != (part.key in self.project.excluded):
+            self.set_excluded({part.key}, want_excluded)
+
+    def _on_table_menu(self, pos):
+        row = self.sidebar.table.rowAt(pos.y())
+        if row >= 0:
+            self._part_menu(self.sidebar.index_at_row(row), self.sidebar.table.viewport().mapToGlobal(pos))
+
+    def _part_menu(self, idx: int, global_pos):
+        """Right-click menu for a part (or empty board when idx is -1)."""
+        if not self.plates:
+            return
+        plate = self.plates[self.plate_idx]
+        menu = QMenu(self)
+        if 0 <= idx < len(plate.parts):
+            part = plate.parts[idx]
+            if part.dnp:
+                a = menu.addAction(f"{part.ref} is do-not-populate in KiCad")
+                a.setEnabled(False)
+            elif part.key in self.project.excluded:
+                menu.addAction(f"Include {part.ref}", lambda: self.set_excluded({part.key}, False))
+            else:
+                menu.addAction(f"Exclude {part.ref}", lambda: self.set_excluded({part.key}, True))
+            same = [p for p in plate.parts if p.package == part.package and not p.dnp]
+            keys = {p.key for p in same}
+            n_ex = len(keys & self.project.excluded)
+            menu.addSeparator()
+            if n_ex < len(same):
+                menu.addAction(f"Exclude all {len(same)} × {part.package} on this plate",
+                               lambda: self.set_excluded(keys, True))
+            if n_ex:
+                menu.addAction(f"Include all {len(same)} × {part.package} on this plate",
+                               lambda: self.set_excluded(keys, False))
+        plate_keys = {p.key for p in plate.parts}
+        if plate_keys & self.project.excluded:
+            menu.addSeparator()
+            menu.addAction("Include everything on this plate", self._include_all)
+        if menu.isEmpty():
+            return
+        menu.exec(global_pos if global_pos is not None else QCursor.pos())
 
     # ---- alignment ---------------------------------------------------------------
     def _on_align_count(self, n: int):

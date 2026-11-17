@@ -26,6 +26,9 @@ In the window:
   `<board>-top.job.json` or `<board>-bottom.job.json`.
 - **Slice settings:** "Auto-number duplicate references" and **Edit heights…** are saved
   per board in `<board>.pnpslice.json`, next to the `.kicad_pcb` file.
+- **Excluding parts:** untick a part in the Parts table, or right-click it (or a whole
+  package) on the board. Excluded parts stay in the job with `"skip": true`, as the spec
+  describes, and are saved per board. See `USER_GUIDE.md`, section 10.
 - **Alignment pads** are chosen automatically (magenta rings, A/B/C). To choose your own,
   click **Pick by hand**: distinct pads turn green and look-alikes red. Click pads to add
   or remove them; **Auto** goes back to the automatic choice. **Look-alike clearance**
@@ -68,7 +71,7 @@ You need Python 3.10 or newer (3.12 or 3.13 recommended) and, optionally, Git.
    pip install -e ".[dev]"
    ```
    "Editable" means changes to files in `src/` take effect immediately, with no reinstall.
-5. **Run the tests.** You should see about 99 passed (UI tests are skipped if PySide6 isn't installed):
+5. **Run the tests.** You should see about 110 passed (UI tests are skipped if PySide6 isn't installed):
    ```bash
    pytest
    ```
