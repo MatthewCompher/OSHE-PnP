@@ -121,8 +121,11 @@ datum_height_mm = 11.0
 clamp_height_mm = 10.0
 
 [feeders]
-# Feeder Nano (Software/feeder_nano/feeder_nano.ino) on USB. Prefer the stable /dev/serial/by-id/...
-# name (`ls /dev/serial/by-id/` on the Pi once it's plugged in) over /dev/ttyUSB0.
+# bus "klipper": servos on the Uno, Klipper/pnp_feeders.cfg; a feed = `<macro> SLOT=n`, where n is the
+# feeder's "servo" in feeders.json (slot, left to right). bus "serial": the old feeder Nano
+# (Software/feeder_nano/feeder_nano.ino) on USB, using port/baud/timeout_s below.
+bus = "klipper"
+macro = "FEEDER_TOGGLE"
 port = "/dev/ttyUSB0"
 baud = 115200
 timeout_s = 8.0                 # a stroke takes ~1-1.5 s (firmware: 90 deg out and back at 5 ms/deg + 2 x 250 ms)

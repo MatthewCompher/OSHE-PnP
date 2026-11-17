@@ -1,5 +1,7 @@
-"""Part sources for the job runner: servo tape feeders (driven by the feeder Nano over USB serial)
-and a manual tape track (you advance the tape by hand when asked).
+"""Part sources for the job runner: servo tape feeders (Klipper servos on the Arduino Uno, or the
+old feeder Nano over USB serial) and a manual tape track (you advance the tape by hand when asked).
+
+`"servo": n` in feeders.json is the feeder SLOT: Klipper [servo feeder_n], counted left to right.
 
 The feeders sit at the front of the machine, outside the staging plate; the down camera can't
 reach them. So a pick position is TAUGHT with the nozzle (jog it down onto the part in the pocket
@@ -70,6 +72,28 @@ class SerialFeederBus:
 
     def close(self):
         self.ser.close()
+
+
+# -- the Uno (Klipper) ---------------------------------------------------------
+class KlipperFeederBus:
+    """Feeder servos on the Arduino Uno as Klipper [servo feeder_N] (Klipper/pnp_feeders.cfg).
+    feed() runs FEEDER_TOGGLE SLOT=n through Moonraker and returns when the stroke is done (the
+    macro dwells with G4, so the head waits too, ~0.8 s); wait() then has nothing left to do."""
+
+    def __init__(self, mr, macro="FEEDER_TOGGLE"):
+        self.mr, self.macro = mr, macro
+
+    def feed(self, servo):
+        try:
+            self.mr.gcode(f"{self.macro} SLOT={int(servo)}")
+        except Exception as e:                 # Klipper's error (bad slot, no servo section) comes back here
+            raise FeederError(f"feeder slot {servo}: {self.macro} failed: {e}") from e
+
+    def wait(self, servo):
+        pass
+
+    def close(self):
+        pass
 
 
 class SimFeederBus:

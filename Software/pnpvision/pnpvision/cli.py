@@ -655,10 +655,12 @@ def cmd_align_board(cfg, a):
 
 
 def _feeder_bus(cfg, sim=False):
-    from .feeders import SerialFeederBus, SimFeederBus
+    from .feeders import KlipperFeederBus, SerialFeederBus, SimFeederBus
     if sim:
         return SimFeederBus()
     fc = cfg.get("feeders", {})
+    if fc.get("bus", "klipper") == "klipper":
+        return KlipperFeederBus(make_mr(cfg), fc.get("macro", "FEEDER_TOGGLE"))
     return SerialFeederBus(fc.get("port", "/dev/ttyUSB0"), fc.get("baud", 115200),
                            fc.get("timeout_s", 8.0))
 
@@ -1195,7 +1197,7 @@ def main():
     p.add_argument("--current", action="store_true", help="this tip is on the nozzle now")
     p = sub.add_parser("teach-feeder", help="nozzle lowered onto the part in the pocket: save the pick spot")
     p.add_argument("id", help="e.g. F1")
-    p.add_argument("--servo", type=int, help="servo number on the feeder Nano")
+    p.add_argument("--servo", type=int, help="feeder slot (Klipper [servo feeder_N], left to right)")
     p.add_argument("--manual", action="store_true", help="manual track (no servo)")
     p.add_argument("--package", required=True, help="KiCad footprint name, as in the job")
     p.add_argument("--value", help="only parts with this value (default: any)")
@@ -1205,7 +1207,7 @@ def main():
     p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it (overrides the plate-layout default)")
     p.add_argument("--goto", action="store_true", help="move the nozzle over the bin in use (taught or default), save nothing")
     p.add_argument("--default", action="store_true", help="forget the taught bin, use the plate-layout default (and go there)")
-    p = sub.add_parser("feed", help="stroke a servo feeder (tests the Nano)")
+    p = sub.add_parser("feed", help="advance a servo feeder one part (FEEDER_TOGGLE SLOT=n)")
     p.add_argument("servo", type=int)
     p.add_argument("--times", type=int, default=1)
     p = sub.add_parser("check-machine", help="after the gantry was used for something else: checks "
