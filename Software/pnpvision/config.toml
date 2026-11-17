@@ -48,7 +48,7 @@ working_distance_mm = 11.5    # lens to PCB top; image scale changes ~1/11.5 per
 width = 1920
 height = 1080
 
-[lighting.down]                 # [led_effect vision_light] on neopixel LEDs 2-3 (printer.cfg)
+[lighting.down]                 # [led_effect vision_light] on neopixel LEDs 2-3 (LEDS.cfg)
 type = "klipper_macro"
 on_macro = "VISION_LIGHT_ON"
 off_macro = "VISION_LIGHT_OFF"
@@ -57,7 +57,7 @@ settle_s = 0.3                  # wait for the LEDs and camera exposure to settl
 
 [lighting.up]                   # light rig that illuminates the part on the nozzle
 type = "klipper_led"            # none | klipper_pin | klipper_led | gpio
-name = "up_light"               # [neopixel up_light] in printer.cfg: 6 x WS2812 on EXP1_8 (PE15)
+name = "up_light"               # [neopixel up_light] in LEDS.cfg: 6 x WS2812 on the Uno, D11 = uno:PB3
 level = 1.0                     # 0..1 (PWM); use 1.0 for plain on/off pins
 settle_s = 0.20                 # wait after switching, before the frame that counts
 ambient_subtract = false        # also grab a light-off frame and subtract it

@@ -47,11 +47,9 @@ scp pnp@PnP.local:~/printer_data/config/printer.cfg "C:\Users\<you>\Documents\Gi
 | `TEST_BED_MOVEMENT [LOOPS=n]` | Corner, diagonal and Z exercise | ✅ Working |
 | `PNP_DEMO [LOOPS=n]` | Simulated pick/place motion only (no vacuum) | ✅ Working |
 | `VALVE_ON` / `VALVE_OFF` / `TOGGLE_VALVE` | Solenoid valve (FAN1 header, `PD12`) | 🚧 Pin control works; pneumatics not finished |
-| `MOTOR_RELAY_ON` / `_OFF` | Pulses the relay on `PE8` for 1 s | 🚧 Test macro |
-| `FEED [COUNT=n]` / `FEEDER_SET ANGLE=` | Reel feeder servo `feeder1` (`PG13`) | 🚧 Servo pulse limits are placeholders; not calibrated |
+| `FEEDER_TOGGLE SLOT=n [COUNT=k]` / `FEEDER_SET SLOT=n ANGLE=` (`OFF=1`) | Tape feeder servos on the Uno (`Klipper/pnp_feeders.cfg`): slot 1 D5, 2 D6, 3 D3 | 🚧 Slot 1 works; slot 2 servo to replace; slot 3 untested |
 | `PICK SPOOL=n` | Move to a spool, lower, open the valve, lift | ⚠️ **Unfinished, don't run.** `z_safe = 80` is outside Z 0–60, and the safe heights assume the old Z direction. |
 | `PLACE X= Y=` | Move, lower, release, lift | ⚠️ **Unfinished, don't run.** It references an undefined `default_z_place`. |
-| `CYCLE` | Feeder pressure/stepper cycle | ⚠️ **Unfinished, don't run.** `pressure_motor` and the `feeder` stepper aren't defined. |
 
 **Clearance:** the tallest fixtures on the staging plate are the reject bin (15 mm), the datum (11 mm) and the PCB clamps (8–10 mm). When jogging X/Y by hand, keep the nozzle at **Z 30 or higher (smaller number)**.
 
