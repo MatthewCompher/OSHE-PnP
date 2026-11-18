@@ -159,11 +159,19 @@ class Panel(ScreenPanel):
         except Exception:
             scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.job_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5, hexpand=True)
+        self.job_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5, hexpand=True,
+                               vexpand=False, valign=Gtk.Align.START)
         scroll.add(self.job_box)
         box.pack_start(scroll, True, True, 0)
         self.job_buttons = []
         return box
+
+    def _row_height(self):
+        """One list row: about 3 lines of KlipperScreen's font (fits ~5 rows on the 7 inch screen)."""
+        try:
+            return int(self._gtk.font_size * 3.2)
+        except (AttributeError, TypeError, ValueError):
+            return 64
 
     @staticmethod
     def _jobs():
@@ -190,7 +198,12 @@ class Panel(ScreenPanel):
                 sub = (f"{s['to_place']} parts, {s['board']} {s['side']}" if s.get("ok") else "unreadable")
                 b = self._gtk.Button("print", f"{stem}   ({sub})", "color1")
                 b.connect("clicked", self._open_job, stem)
+            # KlipperScreen buttons expand to fill all space: with few jobs one button filled the
+            # whole list and its label sat mid-screen (2026-11-18). Fixed-height rows from the top.
             b.set_hexpand(True)
+            b.set_vexpand(False)
+            b.set_valign(Gtk.Align.START)
+            b.set_size_request(-1, self._row_height())
             self.job_box.pack_start(b, False, False, 0)
             self.job_buttons.append(b)
         self.job_box.show_all()
