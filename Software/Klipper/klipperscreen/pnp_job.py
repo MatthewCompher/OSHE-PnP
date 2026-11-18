@@ -42,6 +42,8 @@ RESULTS_DIR = os.path.join(PNP_DIR, "results")
 STATE = "gcode_macro _PNP_STATE"
 STOP_ARM_S = 5
 DEFAULT_S_PER_PART = 7.0          # for the time estimate before a job has been run
+LIVE_MARKUP = ("<span size='large' weight='bold' foreground='#ff4040'>"
+               "JOB RUNNING: the machine moves on its own. Hands clear.</span>")
 
 
 def _elapsed(sec):
@@ -317,6 +319,11 @@ class Panel(ScreenPanel):
     # -- status view -----------------------------------------------------------------------------
     def _build_status(self):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, hexpand=True, vexpand=True)
+        # while a job runs: a red line at the top, so nobody mistakes the machine for idle
+        self.live_banner = Gtk.Label(label="", xalign=0.5, hexpand=True)
+        self.live_banner.set_markup(LIVE_MARKUP)
+        self.live_banner.set_no_show_all(True)
+        box.pack_start(self.live_banner, False, False, 0)
         grid = Gtk.Grid(column_spacing=15, row_spacing=2, hexpand=True)
         self.info = {}
         rows = (("machine", "Machine"), ("job", "Job"), ("part", "Part"), ("count", "Placed"),
@@ -339,8 +346,11 @@ class Panel(ScreenPanel):
         cont.connect("clicked", self._send, "PNP_CONTINUE")
         self.stop_button = self._gtk.Button("stop", "Stop job", "color2")
         self.stop_button.connect("clicked", self._stop)
+        estop = self._gtk.Button("emergency", "EMERGENCY STOP", "color2")
+        estop.connect("clicked", self._estop)
         run.attach(cont, 0, 0, 1, 1)
         run.attach(self.stop_button, 1, 0, 1, 1)
+        run.attach(estop, 2, 0, 1, 1)
         done = Gtk.Grid(column_homogeneous=True, hexpand=True, vexpand=True)
         to_list = self._gtk.Button("arrow-left", "Back to jobs", "color1")
         to_list.connect("clicked", self._back)
@@ -356,6 +366,15 @@ class Panel(ScreenPanel):
 
     def _send(self, widget, script):
         self._screen._ws.api.gcode_script(script)
+
+    def _estop(self, widget=None):
+        """One tap, no confirm: Klipper's emergency stop (M112). All motors and outputs stop at
+        once (vacuum off, part drops); afterwards FIRMWARE_RESTART, then Vision home."""
+        try:
+            self._screen._ws.send_method("printer.emergency_stop", {})
+        except Exception as e:
+            logging.error(f"pnp_job estop: {e}")
+            self._send(widget, "M112")
 
     def _stop(self, widget):
         """Two taps on the page: no confirm pop-up for a machine move to close."""
@@ -380,6 +399,7 @@ class Panel(ScreenPanel):
         was = self.running
         self.running = running
         self.run_buttons.set_visible_child_name("run" if running else "done")
+        (self.live_banner.show if running else self.live_banner.hide)()
         if running:
             self.stop_armed = False
             _set_button_text(self.stop_button, "Stop job")

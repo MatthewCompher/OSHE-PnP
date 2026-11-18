@@ -200,3 +200,14 @@ def test_usb_import_button_and_list_refresh(tmp_path):
     assert p.job_names == ["New board-top", "Test PCB-top"]
     p._show({"vision_homed": 1, "job_running": 0, "import_msg": "USB: loaded 1 job (New board-top)"}, "xyz")
     assert p.list_status.text.startswith("USB: loaded 1 job")
+
+
+def test_emergency_stop_and_live_banner(tmp_path):
+    mod, p, screen = _panel(tmp_path)
+    p.live_banner = mock.MagicMock()
+    p._show({"vision_homed": 1, "job_running": 1, "job": "j", "t_start": time.time()}, "xyz")
+    p.live_banner.show.assert_called()                     # red "JOB RUNNING" line while live
+    p._estop(None)                                         # one tap, no confirm
+    screen._ws.send_method.assert_called_with("printer.emergency_stop", {})
+    p._show({"vision_homed": 1, "job_running": 0, "job": "j", "result": "Done"}, "xyz")
+    p.live_banner.hide.assert_called()

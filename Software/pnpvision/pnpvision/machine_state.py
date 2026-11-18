@@ -1,5 +1,6 @@
 """Measured machine values (written by calibrate-* commands), kept out of hand-edited config."""
 import json
+import os
 from pathlib import Path
 
 DEFAULTS = {
@@ -21,5 +22,13 @@ def load(path):
 def save(path, **updates):
     d = load(path)
     d.update(updates)
-    Path(path).write_text(json.dumps(d, indent=2))
+    write_json_atomic(path, d)
     return d
+
+
+def write_json_atomic(path, obj):
+    """Write to a temp file, then rename over the old one: a power cut or crash mid-write leaves
+    the old file intact instead of a half-written one (calibration is hard to re-measure)."""
+    tmp = Path(str(path) + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=2))
+    os.replace(tmp, path)

@@ -22,6 +22,11 @@ Software/pnpvision/results/
 Software/pnpvision/*.sqlite
 Software/pnpvision/*.tgz
 Software/pnpvision/calibration/feeders.json
+# slicer .exe build (build_exe.ps1): rebuilt, never committed
+Software/Slicer/.build-venv/
+Software/Slicer/build/
+Software/Slicer/dist/
+Software/Slicer/pnpslice.spec
 # jobs loaded from an SD card / USB stick under the name of a job already on the Pi (import-jobs)
 Software/pnpvision/jobs/*-usb.job.json
 *.tgz

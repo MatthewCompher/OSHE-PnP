@@ -166,8 +166,8 @@ class FeederBank:
             return cls([Feeder(d, bus, ask) for d in json.load(f).get("feeders", [])])
 
     def save(self, path):
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"feeders": [fd.d for fd in self.feeders]}, f, indent=2)
+        from .machine_state import write_json_atomic
+        write_json_atomic(path, {"feeders": [fd.d for fd in self.feeders]})
 
     def get(self, fid):
         for fd in self.feeders:
