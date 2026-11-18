@@ -128,6 +128,18 @@ cd ~/OSHE-PnP/Software/pnpvision
 (`requirements-lock.txt` has the exact versions the machine runs; `requirements.txt` lists the
 packages without versions.)
 
+### Allow SD/USB job loading
+
+The **Load jobs from SD card / USB stick** button mounts the stick read-only, which needs root.
+This rule allows exactly that mount and unmount without a password, nothing else:
+
+```bash
+cp ~/OSHE-PnP/Software/Klipper/sudoers-pnp-usb-import /tmp/pnp-usb-import
+sudo visudo -cf /tmp/pnp-usb-import && sudo install -m 440 -o root -g root /tmp/pnp-usb-import /etc/sudoers.d/pnp-usb-import
+```
+
+`visudo -cf` checks the file first, so a typo can't break `sudo`.
+
 ## 9. Touchscreen
 
 ```bash

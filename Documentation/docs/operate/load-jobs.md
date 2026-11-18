@@ -27,6 +27,7 @@ No Wi-Fi or laptop needed: carry the job on an SD card or USB stick.
 | `USB: loaded 0 jobs, 1 already there` | the same file is already on the machine |
 | `USB: no SD card / USB stick found` | plug in the reader with the card in it |
 | `USB: card reader found, but no card in it` | insert the card |
+| `USB: could not read the card: ... sudo: a password is required` | the mount rule isn't installed: [Install, "Allow SD/USB job loading"](../software/install.md#allow-sdusb-job-loading) |
 | `USB: could not read the card: ...` | unusual format: use FAT32 or exFAT |
 | `... a job is running; PNP_STOP it first` | loading waits until the job ends |
 
