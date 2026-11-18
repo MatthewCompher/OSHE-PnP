@@ -1,46 +1,87 @@
+---
+hide:
+  - navigation
+---
+
+<div class="oshe-hero" markdown>
+
 # OSHE Pick and Place
 
-The OSHE Pick and Place is a low-cost, open-source machine that places surface-mount parts onto
-printed circuit boards. It starts from the parts of a Creality Ender 3 3D printer and adds a
-3D-printed CoreXY frame, a vacuum toolhead, two cameras, tape feeders and its own software.
+An open-source pick-and-place machine for surface-mount parts, built from a Creality Ender 3,
+a 3D-printed CoreXY frame, a vacuum toolhead, two cameras and its own software.
 
-It is built by students in the **Open Source Hardware Enterprise** at Michigan Technological
-University. Learn more about OSHE at **[oshe.io](https://oshe.io)**. Every design file, config file
-and line of code is in the repository:
-**[github.com/OSHE-Github/OSHE-PnP](https://github.com/OSHE-Github/OSHE-PnP)**.
+Made by students of the **Open Source Hardware Enterprise** at Michigan Technological University:
+[oshe.io](https://oshe.io) · every file is on
+[GitHub](https://github.com/OSHE-Github/OSHE-PnP).
+
+[Begin here](overview/index.md){ .md-button .md-button--primary }
+[Run a job](operate/index.md){ .md-button }
+[See the results](testing/results.md){ .md-button }
+
+</div>
+
+<div class="oshe-stats" markdown>
+<div><strong>~511</strong><span>parts per hour (best 527)</span></div>
+<div><strong>97.9 %</strong><span>picks from tape (92 / 94)</span></div>
+<div><strong>0.08 mm</strong><span>mean placement error</span></div>
+<div><strong>331 / 331</strong><span>vision decisions correct</span></div>
+</div>
 
 !!! info "Project state: functional prototype (V3, Fall 2026)"
     The machine runs complete jobs from the touchscreen: feeder, pick, camera check, place.
     The build guide, bill of materials and wiring diagram for V3 are still being written
     (marked **Ongoing** on those pages).
 
-## At a glance
-
-| | V3 result (2026-11-18) |
-|---|---|
-| Speed | **~511 parts per hour** on average over four 23-part runs (best 527) |
-| Pick success | **97.9 %** (92 of 94 picks, 0603 resistors) |
-| Placement accuracy | mean error **0.075 - 0.094 mm**, worst 0.229 mm |
-| Vision decisions | all 193 up-camera and 138 board-check decisions judged correct by hand |
-| Operation | touchscreen only: no laptop or network needed to load and run a job |
-
-See [Testing & Results](testing/index.md) for how these were measured.
-
 ## How a board gets made
 
-1. **Design** the board in KiCad.
-2. **Slice** it with the pnpslice app on your computer: it writes a job file per board side.
-3. **Load** the job onto the machine from an SD card or USB stick (or over the network).
-4. **Run** it from the touchscreen: the machine finds the board with its down camera, then for each
-   part it feeds the tape, picks the part, checks it over the up camera, corrects offset and angle,
-   and places it.
+<div class="grid cards" markdown>
 
-## Begin here
+-   :material-pencil-ruler: **1. Design**
 
-- **New to the machine?** Read [How It Works](overview/index.md) and [Safety](overview/safety.md).
-- **Building one?** Start at [Build](build/index.md), then [Software Setup](software/index.md)
-  and [Calibration](calibration/index.md).
-- **Running a board?** Go to [Running Jobs](operate/index.md).
+    ---
+    Lay out the board in KiCad as usual.
+
+-   :material-layers-triple: **2. Slice**
+
+    ---
+    [pnpslice](operate/make-a-job.md) checks the board, orders the parts and writes a job file.
+
+-   :material-sd: **3. Load**
+
+    ---
+    Carry the job on an [SD card or USB stick](operate/load-jobs.md) - no network needed.
+
+-   :material-robot-industrial: **4. Run**
+
+    ---
+    [Start it on the touchscreen](operate/run-a-job.md): the cameras find the board, check every
+    part and correct it before placing.
+
+</div>
+
+## Where do you want to go?
+
+<div class="grid cards" markdown>
+
+-   :material-book-open-variant: **New to the machine**
+
+    ---
+    [How It Works](overview/index.md) · [Specifications](overview/specs.md) ·
+    [Safety](overview/safety.md)
+
+-   :material-hammer-wrench: **Building one**
+
+    ---
+    [Build](build/index.md) -> [Software Setup](software/index.md) ->
+    [Calibration](calibration/index.md)
+
+-   :material-play-circle: **Running boards**
+
+    ---
+    [Daily startup](operate/startup.md) · [Run a job](operate/run-a-job.md) ·
+    [Troubleshooting](help/troubleshooting.md)
+
+</div>
 
 ## Table of contents
 

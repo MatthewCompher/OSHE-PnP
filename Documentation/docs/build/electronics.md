@@ -25,8 +25,8 @@ From `Software/Klipper/printer.cfg`, `pnp_feeders.cfg` and `LEDS.cfg`.
 
 | Klipper name | Device | Pin | Notes |
 |---|---|---|---|
-| `stepper_x` | CoreXY motor A | step PF13, dir PF12, en PF14, CS PC4 | 1.0 A, diag PG6 |
-| `stepper_y` | CoreXY motor B | step PG0, dir PG1, en PF15, CS PD11 | 1.0 A, diag PG9 |
+| `stepper_x` | CoreXY motor, **rear left** (seen from the front) | step PF13, dir PF12, en PF14, CS PC4 (MOTOR0) | 1.0 A, diag PG6 |
+| `stepper_y` | CoreXY motor, **rear right** | step PG0, dir PG1, en PF15, CS PD11 (MOTOR1) | 1.0 A, diag PG9 |
 | `stepper_z` | Z | step PF11, dir PG3, en PG5, CS PC6 | 0.5 A (homes at 0.8), diag PG10 |
 | `manual_stepper stepper_r` | nozzle rotation | step PG4, dir PC1, en PA2, CS PC7 | 0.5 A |
 | `output_pin valve` | solenoid valve | PD12 (FAN1) | off at power loss |
@@ -38,6 +38,15 @@ From `Software/Klipper/printer.cfg`, `pnp_feeders.cfg` and `LEDS.cfg`.
 | `servo feeder_2`, `_3` | feeder slots 2, 3 | `uno:PD6`, `uno:PD3` | not in use |
 
 All TMC5160s share software SPI: SCLK PA5, MOSI PA7, MISO PA6.
+
+!!! tip "Which CoreXY motor is which"
+    In Klipper's CoreXY, `stepper_x` drives the X+Y belt and `stepper_y` the X-Y belt. With the
+    Voron-style belt path and both motors at the back, that puts `stepper_x` (Octopus **MOTOR0**) on
+    the **rear left** and `stepper_y` (**MOTOR1**) on the **rear right**, which matches this machine
+    homing to the front left with neither direction inverted. If the two plugs are swapped, X still
+    moves correctly but Y runs backwards and homing ends at the back left: swap MOTOR0 and MOTOR1
+    back. To check a motor directly (machine homed, nozzle up): `FORCE_MOVE STEPPER=stepper_x
+    DISTANCE=5 VELOCITY=10` turns only that motor (the head moves diagonally).
 
 ## Wiring rules we learned
 

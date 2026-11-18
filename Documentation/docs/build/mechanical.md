@@ -31,8 +31,10 @@ a NEMA 11 stepper through a rotary pneumatic fitting, plus the down camera and t
 3. Attach the toolhead to the X carriage and the Z stage. Start with the **N08** tip.
 
 ## Staging plate
-1. Assemble the plate tiles on the brackets and spacers, with the **camera tile** over the up camera.
-2. Mount the up camera (InnoMaker 720P) and its 6-LED ring under the camera tile, looking up.
+1. Assemble the plate (four quarters or two halves) on the plate brackets, with the up-camera
+   opening over the up camera.
+2. Mount the up camera (InnoMaker 720P) in its camera mount, with the LED ring on the light plate
+   and the diffuser, under the opening, looking up.
 3. Fix the **camera datum**, the **PCB mounts** (one fixed, one adjustable) and the **reject bin**
    into their inserts. Positions are set by the plate's insert grid (30 mm pitch); see
    `config.toml [layout]`.
