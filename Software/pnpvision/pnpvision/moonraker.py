@@ -19,14 +19,42 @@ class Moonraker:
         self.limits = {"x": x_range, "y": y_range, "z": z_range}
         self.safe_travel_z = safe_travel_z
         self.front_zone_y, self.front_zone_z = front_zone_y, front_zone_z
+        # Streaming (run-job, feeder-cycle): moves are queued without M400, so Klipper blends
+        # them instead of stopping ~0.3 s after each one (it starts every new batch of motion
+        # 0.25 s in the future), and the toolhead position / homed state come from a local
+        # cache instead of a 0.1-0.2 s query per move. Call wait() before anything that needs
+        # the machine to BE there (a camera frame). Valve, servo and dwell commands are queued
+        # in order with the moves by Klipper, so they need no wait.
+        self.stream = False
+        self._pos = None
+        self._homed = False
+
+    def set_stream(self, on):
+        self.stream = bool(on)
+        self._pos, self._homed = None, False
 
     # -- raw ---------------------------------------------------------------
+    MOVING = ("G0", "G1", "G28", "G92", "SET_KINEMATIC_POSITION", "FORCE_MOVE")
+
+    _own_move = False                      # set by move_abs around its own G1 lines
+
     def gcode(self, script):
-        """Blocks until Klipper has executed the script (the endpoint returns when done)."""
-        r = requests.post(f"{self.url}/printer/gcode/script",
+        """Returns when Klipper has PROCESSED the script; moves have finished only if it ends with
+        M400 (or another waiting command)."""
+        if not self._own_move and any(m in script.upper() for m in self.MOVING):
+            self._pos, self._homed = None, False          # something else moved the toolhead
+        try:
+            r = requests.post(f"{self.url}/printer/gcode/script",
                           json={"script": script}, timeout=self.timeout)
-        r.raise_for_status()
+            r.raise_for_status()
+        except Exception:
+            self._pos, self._homed = None, False
+            raise
         return r.json()
+
+    def wait(self):
+        """Block until every queued move has finished (streaming mode)."""
+        self.gcode("M400")
 
     def status(self, obj="toolhead"):
         r = requests.get(f"{self.url}/printer/objects/query?{obj}", timeout=10)
@@ -53,11 +81,18 @@ class Moonraker:
         return r.json()["result"]["status"].get(obj, {})
 
     def position(self):
+        if self.stream and self._pos is not None:
+            return self._pos
         x, y, z = self.status("toolhead")["position"][:3]
+        self._pos = (x, y, z)
         return x, y, z
 
     def is_homed(self, axes="xyz"):
-        return all(a in self.status("toolhead")["homed_axes"] for a in axes)
+        if self.stream and self._homed:
+            return True
+        ok = all(a in self.status("toolhead")["homed_axes"] for a in axes)
+        self._homed = ok and axes == "xyz"
+        return ok
 
     # -- bounded moves -----------------------------------------------------
     def _check(self, axis, v):
@@ -101,7 +136,12 @@ class Moonraker:
             lines.append(f"G1 Z{z:.4f} F{f:.0f}")
         if len(lines) == 1:
             return
-        self.gcode("\n".join(lines + ["M400"]))
+        self._own_move = True
+        try:
+            self.gcode("\n".join(lines if self.stream else lines + ["M400"]))
+        finally:
+            self._own_move = False
+        self._pos = (x if x is not None else cx, y if y is not None else cy, z if z is not None else cz)
 
     def travel_z_for(self, y_from, y_to):
         """Height (Z, smaller = higher) the nozzle needs for an X/Y move between these Y values:

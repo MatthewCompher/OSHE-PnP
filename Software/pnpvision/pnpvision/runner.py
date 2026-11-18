@@ -150,6 +150,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
 
     def timed_prompt(f):
         def wrapped(prompt):
+            settle()                               # don't ask while the head is still moving
             t0 = clock()
             try:
                 return f(prompt)
@@ -181,10 +182,17 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
             mr.move_abs(z=z - 0.5, feedrate=zf["release_lift"])
         lift(mr, feedrate=zf["lift"])
 
+    def settle():
+        """Streaming moves (Moonraker.set_stream): wait until the machine is really there."""
+        w = getattr(mr, "wait", None)
+        if w is not None and getattr(mr, "stream", False):
+            w()
+
     def look_up(tip, body):
         up = np.asarray(ms["up_cam_xy_mm"], float)
         mr.move_abs(x=float(up[0]), y=float(up[1]))
         mr.move_abs(z=tips[tip]["inspect_z"], feedrate=zf["inspect"])
+        settle()                                   # the frame must be taken over the camera
         return up_inspect(body)
 
     def reject(rec, why):
@@ -339,6 +347,10 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
     finally:
         for fd, f in saved_asks.values():
             fd.ask = f
+        try:
+            settle()                               # count the last part's queued moves too
+        except Exception:
+            pass
     done = sum(r.get("status") == "placed" for r in results)
     lift(mr, feedrate=zf["lift"])
     total = clock() - t_start

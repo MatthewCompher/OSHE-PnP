@@ -797,6 +797,7 @@ def cmd_feeder_cycle(cfg, a):
     if not a.yes and input("Machine homed, part in the pick pocket, bin empty? Start? [y/N] ").strip().lower() != "y":
         return
     times = []
+    mr.set_stream(rc.get("stream", True))
     try:
         for i in range(1, a.n + 1):
             t0 = time.time()
@@ -809,6 +810,7 @@ def cmd_feeder_cycle(cfg, a):
             fd.after_pick()                        # next part into the pocket
             mr.move_abs(x=float(bin_xy[0]), y=float(bin_xy[1]))
             mr.gcode(f"VALVE_OFF\nG4 P{release_ms}")
+            mr.wait()                              # cycle time = real machine time
             times.append(time.time() - t0)
             print(f"  cycle {i}/{a.n}: {times[-1]:.1f} s")
     except KeyboardInterrupt:
@@ -817,8 +819,10 @@ def cmd_feeder_cycle(cfg, a):
         try:
             mr.gcode("VALVE_OFF")
             lift(mr, feedrate=600)
+            mr.wait()
         except Exception as e:
             print("could not release / lift:", e)
+        mr.set_stream(False)
         bus.close()
     if times:
         print(f"{len(times)} cycles, mean {np.mean(times):.1f} s. Count the parts in the bin: "
@@ -993,6 +997,7 @@ def _run_job(cfg, a, hmi):
         old_accel = mr.status("toolhead").get("max_accel")
         mr.gcode(f"SET_VELOCITY_LIMIT ACCEL={float(rc['accel']):.0f}")
     timing = {k: rc[k] for k in ("vac_ms", "release_ms", "pick_press", "place_press", "approach_mm") if k in rc}
+    mr.set_stream(rc.get("stream", True))        # queue moves, wait only before camera frames
     up_cam, up_lens = open_cam(cfg, "up")
     lc = cfg["lighting"]["up"]
     try:
@@ -1054,6 +1059,11 @@ def _run_job(cfg, a, hmi):
             lift(mr, feedrate=600)
         except Exception as e:
             print("could not lift the nozzle:", e)
+        try:
+            mr.wait()
+        except Exception:
+            pass
+        mr.set_stream(False)
         if old_accel:
             try:
                 mr.gcode(f"SET_VELOCITY_LIMIT ACCEL={float(old_accel):.0f}")

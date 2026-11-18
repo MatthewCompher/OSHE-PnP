@@ -72,6 +72,12 @@ def test_feeder_cycle_picks_feeds_and_drops(tmp_path, monkeypatch):
         def gcode(self, script):
             self.log.append(("gcode", script))
 
+        def wait(self):
+            self.log.append(("gcode", "M400"))
+
+        def set_stream(self, on):
+            self.stream = on
+
     m = Machine()
     feeders = tmp_path / "feeders.json"
     feeders.write_text(json.dumps({"feeders": [{"id": "F1", "kind": "servo", "servo": 1, "xy": [34.7, 26.7],
@@ -88,3 +94,46 @@ def test_feeder_cycle_picks_feeds_and_drops(tmp_path, monkeypatch):
     assert sum(s.startswith("VALVE_ON") for s in g) == 2 and sum(s.startswith("VALVE_OFF") for s in g) >= 2
     assert ("move", None, None, 33.1) in m.log                # part top 32.7 + 0.4 pick press
     assert ("move", 60.0, 130.0, None) in m.log
+
+
+def test_streaming_moves_skip_m400_and_position_queries(monkeypatch):
+    from pnpvision import moonraker as M
+    sent, queries = [], []
+
+    class R:
+        def __init__(self, data=None):
+            self.data = data or {"result": {}}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self.data
+
+    def post(url, json=None, timeout=None):
+        sent.append(json["script"])
+        return R()
+
+    def get(url, timeout=None, params=None):
+        queries.append(url)
+        return R({"result": {"status": {"toolhead": {"position": [10.0, 100.0, 26.0, 0.0], "homed_axes": "xyz"}}}})
+
+    monkeypatch.setattr(M.requests, "post", post)
+    monkeypatch.setattr(M.requests, "get", get)
+    mr = M.Moonraker(z_range=(0, 51), safe_travel_z=26.0)
+    mr.set_stream(True)
+    mr.move_abs(x=50.0, y=120.0)
+    first = len(queries)
+    mr.move_abs(z=38.0)
+    mr.move_abs(z=26.0)
+    assert len(queries) == first                  # after the first move: the cache, no queries
+    assert not any("M400" in s for s in sent)
+    assert mr.position() == (50.0, 120.0, 26.0)
+    mr.gcode("G28 X Y")                           # someone else moved it: query again
+    mr.position()
+    assert len(queries) == first + 1
+    mr.wait()
+    assert sent[-1] == "M400"
+    mr.set_stream(False)
+    mr.move_abs(z=30.0)
+    assert sent[-1].endswith("M400")
