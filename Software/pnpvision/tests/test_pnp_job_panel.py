@@ -62,16 +62,24 @@ def _panel(tmp_path):
     return mod, p, screen
 
 
-def test_idle_page_and_start_script(tmp_path):
+def test_list_detail_and_start_script(tmp_path):
     mod, p, screen = _panel(tmp_path)
-    assert p.running is False
+    assert p.running is False and p.view == "list"
     assert mod.Panel._jobs() == ["Test PCB-top"]
+    p._open_job(mock.MagicMock(), "Test PCB-top")
+    assert p.view == "detail" and p.selected == "Test PCB-top"
     p._toggle(mock.MagicMock(), "dry_run")
-    p._start(mock.MagicMock(), "Test PCB-top")
+    p._start(mock.MagicMock(), p.selected)
     args = screen._confirm_send_action.call_args[0]
     assert args[2] == "printer.gcode.script"
     assert args[3] == {"script": "RUN_JOB JOB=Test_PCB-top ALIGN=1 DRY_RUN=1"}, args[3]
     assert "Dry run" in args[1]
+    p._toggle(mock.MagicMock(), "align")                   # untick: skip the alignment
+    p._toggle(mock.MagicMock(), "dry_run")
+    p._start(mock.MagicMock(), p.selected)
+    assert screen._confirm_send_action.call_args[0][3] == {"script": "RUN_JOB JOB=Test_PCB-top ALIGN=0"}
+    p._back()
+    assert p.view == "list"
 
 
 def test_running_page_shows_state_and_buttons(tmp_path):
@@ -80,8 +88,9 @@ def test_running_page_shows_state_and_buttons(tmp_path):
           "ref": "R0805_18", "placed": 2, "failed": 0, "t_start": time.time() - 75, "t_end": 0.0,
           "msg": "on nozzle: offset [0.1, 0.2] mm", "result": ""}
     p._show(st, "xyz")
-    assert p.running is True
+    assert p.running is True and p.view == "status"          # a job started: the page follows it
     assert p.info["machine"].text == "Vision homed"
+    assert "running Test PCB-top" in p.list_status.text
     assert p.info["part"].text.startswith("3 / 12") and "R0805_18" in p.info["part"].text
     assert p.info["count"].text == "2 placed, 0 failed"
     assert p.info["time"].text.startswith("1 min 1")
@@ -144,3 +153,39 @@ def test_job_buttons_only_rebuilt_when_the_list_changes(tmp_path):
     (tmp_path / "jobs" / "Other-top.job.json").write_text("{}")
     p.activate()
     assert len(p.job_buttons) == 2
+
+
+def test_finished_job_keeps_its_result_then_back_to_list(tmp_path):
+    mod, p, screen = _panel(tmp_path)
+    p._show({"job_running": 1, "job": "j", "t_start": time.time()}, "xyz")
+    p._show({"job_running": 0, "job": "j", "result": "Done: 23/23 placed, 527 CPH",
+             "t_start": time.time() - 160, "t_end": time.time()}, "xyz")
+    assert p.running is False and p.view == "status"
+    assert p.info["msg"].text.startswith("Done")
+    p._back()
+    assert p.view == "list" and "Done: 23/23" in p.list_status.text
+
+
+def test_job_summary(tmp_path):
+    import json
+    jobs = tmp_path / "jobs"
+    jobs.mkdir()
+    pl = ([{"ref": f"R0603_{i}", "package": "R_0603_1608Metric"} for i in range(23)]
+          + [{"ref": f"R0805_{i}", "package": "R_0805_2012Metric"} for i in range(23)]
+          + [{"ref": "U1", "package": "SOIC-8_3.9x4.9mm_P1.27mm", "skip": True}])
+    (jobs / "B-top.job.json").write_text(json.dumps({"board": {"name": "B", "side": "top"}, "placements": pl}))
+    feeders = tmp_path / "feeders.json"
+    feeders.write_text(json.dumps({"feeders": [{"id": "F1", "package": "R_0603_1608Metric"}]}))
+    res = tmp_path / "results"
+    res.mkdir()
+    (res / "job_20261118_133934.json").write_text(json.dumps(
+        {"job": "/home/pnp/x/jobs/B-top.job.json", "timing": {"placed": 23, "attempted": 23, "cph": 527.1,
+                                                            "s_per_part": 6.83}}))
+    mod = _load(str(jobs))
+    s = mod.job_summary("B-top", str(jobs), str(feeders), str(res))
+    assert s["to_place"] == 46 and s["skipped"] == 1
+    assert s["covered"] == [("R_0603_1608Metric", 23, "F1")]
+    assert s["missing"] == [("R_0805_2012Metric", 23)]
+    assert s["last"]["cph"] == 527.1 and s["last"]["when"] == "11-18 13:39"
+    assert abs(s["estimate_s"] - 23 * 6.83) < 1e-6
+    assert not mod.job_summary("nope", str(jobs), str(feeders), str(res))["ok"]
