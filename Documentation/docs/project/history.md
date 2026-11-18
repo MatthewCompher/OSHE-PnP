@@ -1,6 +1,6 @@
 # History (V1, V2)
 
-One version per semester. Files for older versions are in `CAD/V1-Legacy`, `CAD/V2-Legacy` and
+One version per semester, built by [OSHE](https://oshe.io) student teams. Files for older versions are in `CAD/V1-Legacy`, `CAD/V2-Legacy` and
 `BOMs/`. The full V2 build guide, wiring and BOM are in the V2 documentation (Google Doc / PDF,
 linked from the repository README).
 

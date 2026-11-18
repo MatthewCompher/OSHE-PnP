@@ -8,7 +8,10 @@ site_url: https://oshe-github.github.io/OSHE-PnP/
 repo_url: https://github.com/OSHE-Github/OSHE-PnP
 repo_name: OSHE-Github/OSHE-PnP
 edit_uri: edit/main/Documentation/docs/
-copyright: OSHE Pick and Place, Open Source Hardware Enterprise (oshe.io). Hardware CERN-OHL-S v2, software GPL-3.0, docs CC BY-SA 4.0.
+copyright: >-
+  <img src="/OSHE-PnP/assets/oshe-logo.png" alt="" class="oshe-footer-logo">
+  A project of the <a href="https://oshe.io">Open Source Hardware Enterprise (oshe.io)</a>, Michigan Tech.
+  Hardware CERN-OHL-S v2, software GPL-3.0, docs CC BY-SA 4.0.
 
 theme:
   name: material
@@ -43,8 +46,9 @@ theme:
   font:
     text: Rubik
     code: JetBrains Mono
+  logo: assets/oshe-logo.png
+  favicon: assets/favicon.png
   icon:
-    logo: material/chip
     admonition:
       note: material/pencil-circle
       tip: material/lightbulb-on

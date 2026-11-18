@@ -5,6 +5,8 @@ hide:
 
 <div class="oshe-hero" markdown>
 
+![OSHE logo](assets/oshe-logo.png){ .oshe-hero-logo }
+
 # OSHE Pick and Place
 
 An open-source pick-and-place machine for surface-mount parts, built from a Creality Ender 3,

@@ -1,5 +1,8 @@
 # How It Works
 
+The OSHE Pick and Place is an open-source hardware project of the
+[Open Source Hardware Enterprise](https://oshe.io) (oshe.io) at Michigan Tech.
+
 The machine moves a single vacuum nozzle over a fixed plate. The board sits on the plate, the tape
 feeders sit at the front, and two cameras tell the software exactly where everything is.
 

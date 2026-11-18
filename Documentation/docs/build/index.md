@@ -40,6 +40,9 @@ This section takes you from a donor Ender 3 to a machine ready for [Software Set
 
 ## Where the files are
 
+Everything is open source: start from [oshe.io](https://oshe.io) or go straight to the
+[repository](https://github.com/OSHE-Github/OSHE-PnP).
+
 | What | Repository folder |
 |---|---|
 | CAD (STEP, STL, 3MF) | `CAD/V3-Active/` (Framing, X-Axis, Staging, Feeder, Electrical) |

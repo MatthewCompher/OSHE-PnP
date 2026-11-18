@@ -1,5 +1,9 @@
 # FAQ
 
+**Who makes it?**
+Students of the Open Source Hardware Enterprise at Michigan Technological University:
+[oshe.io](https://oshe.io).
+
 **Do I need a laptop to run it?**
 No. Load jobs from an SD card or USB stick and run them from the touchscreen. A laptop (or any
 browser on the same network) is handy for Mainsail and for calibration over SSH.

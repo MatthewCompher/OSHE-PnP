@@ -2,7 +2,8 @@
 
 ## Contributing
 
-Everything is on GitHub: [OSHE-Github/OSHE-PnP](https://github.com/OSHE-Github/OSHE-PnP).
+Everything is on GitHub: [OSHE-Github/OSHE-PnP](https://github.com/OSHE-Github/OSHE-PnP). Other OSHE
+projects and how to get involved: [oshe.io](https://oshe.io).
 
 - **Report a problem or suggest a change**: open an issue.
 - **Change something**: fork, change, and open a pull request.

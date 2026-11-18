@@ -140,3 +140,24 @@
 .md-typeset .grid.cards > ul > li:hover {
   border-color: var(--oshe-gold);
 }
+
+/* OSHE logo: header, hero, footer */
+.md-header__button.md-logo img {
+  height: 1.8rem;
+  width: auto;
+}
+.oshe-hero-logo {
+  float: right;
+  width: 120px;
+  margin: 0 0 0.5rem 1.5rem;
+}
+@media screen and (max-width: 600px) {
+  .oshe-hero-logo { width: 72px; }
+}
+.md-copyright img.oshe-footer-logo {
+  height: 1.4em !important;
+  width: auto !important;
+  vertical-align: middle;
+  margin-right: 0.4em;
+}
+.md-copyright a { color: var(--oshe-gold); }

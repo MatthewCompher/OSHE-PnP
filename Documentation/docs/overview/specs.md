@@ -15,6 +15,7 @@
 | Host | Raspberry Pi 4, 1 GB, MainsailOS |
 | Controller | BTT Octopus Pro (STM32H723), TMC5160 drivers; Arduino Uno as second Klipper MCU |
 | Interface | 7" touchscreen (KlipperScreen), Mainsail in a browser |
+| Identification | OSHE logo and open-source hardware logo on the machine; project and files at [oshe.io](https://oshe.io) and [GitHub](https://github.com/OSHE-Github/OSHE-PnP) |
 | Job input | KiCad `.kicad_pcb` -> pnpslice -> `.job.json`, loaded over the network or from SD card / USB stick |
 
 !!! warning "Ongoing"
