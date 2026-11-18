@@ -850,7 +850,8 @@ def cmd_check_board(cfg, a):
     """Down camera over each footprint of the aligned board: is a part on it? (PLACED / MISSING)
     Each check is logged (event board_check) with its photo, for `report` and human review."""
     from .board import BoardPose
-    from .boardcheck import annotate, check_footprint, px_per_mm
+    from .boardcheck import annotate, check_footprint, measure_body, px_per_mm, wrap90
+    from .parts import package_info
     from .runner import dry_run
     path = _find_job(cfg, a.job)
     with open(path, encoding="utf-8") as f:
@@ -869,7 +870,9 @@ def cmd_check_board(cfg, a):
     img_dir = f"board_check_{stamp}"
     os.makedirs(img_dir, exist_ok=True)
     cam, lens = open_cam(cfg, "down")
-    k = px_per_mm(MotionMap.load(C.rel(cfg, cfg["cameras"]["down"]["motion_map"])))
+    down_motion = MotionMap.load(C.rel(cfg, cfg["cameras"]["down"]["motion_map"]))
+    k = px_per_mm(down_motion)
+    by_ref = {p["ref"]: p for p in job["placements"]}
     centre = (float(lens.newK[0, 2]), float(lens.newK[1, 2]))
     results = []
     try:
@@ -878,18 +881,42 @@ def cmd_check_board(cfg, a):
             img = lens.undistort(cam.fresh(settle_s=cfg["moonraker"]["settle_s"]))
             res = check_footprint(img, centre, k, window_mm=float(bc.get("window_mm", 0.6)),
                                   green_max=float(bc.get("green_max", 0.5)))
+            ref = name.split("_", 1)[1]
+            p = by_ref.get(ref, {})
+            extra = {}
+            if res["placed"] and p:
+                # placement error: chip-body centre vs the footprint centre (camera axis), machine mm
+                try:
+                    pkg = package_info(p["package"], cfg.get("packages", {}))
+                    mb = measure_body(img, centre, k, pkg["body_mm"])
+                except Exception:
+                    mb = {"found": False}
+                if mb.get("found"):
+                    off = down_motion.offset_mm(np.subtract(mb["centre_px"], centre))
+                    extra = {"dx_mm": round(float(off[0]), 3), "dy_mm": round(float(off[1]), 3),
+                             "err_mm": round(float(np.hypot(*off)), 3)}
+                    if mb["angle_px_deg"] is not None:
+                        want = pose.part_angle(p["rot"]) + pkg["axis_deg"]
+                        got = down_motion.direction_mm(mb["angle_px_deg"])
+                        extra["angle_err_deg"] = round(wrap90(got - want), 1)
+                    res["body_px"] = mb["centre_px"]
+            res.update(extra)
             photo = os.path.join(img_dir, name + ".png")
             cv2.imwrite(photo, annotate(img, centre, k, res, window_mm=float(bc.get("window_mm", 0.6))))
-            ref = name.split("_", 1)[1]
             log_db.log("board_check", ok=res["placed"], ref=ref, green=res["green"], reason=res["reason"],
-                       part_id=photo)
+                       part_id=photo, **extra)
             results.append((ref, res))
-            print(f"    {'PLACED ' if res['placed'] else 'MISSING'} (green {res['green']})")
+            err = (f", off {extra['err_mm']:.3f} mm (dx {extra['dx_mm']:+.3f} dy {extra['dy_mm']:+.3f})"
+                   + (f", angle {extra['angle_err_deg']:+.1f} deg" if "angle_err_deg" in extra else "")) if extra else ""
+            print(f"    {'PLACED ' if res['placed'] else 'MISSING'} (green {res['green']}){err}")
         dry_run(job, pose, look, cfg.get("packages", {}), set(a.only) if a.only else None)
     finally:
         cam.stop()
         lift(mr, feedrate=600)
     n = sum(1 for _, r in results if r["placed"])
+    errs = [r["err_mm"] for _, r in results if r.get("err_mm") is not None]
+    if errs:
+        print(f"placement error over {len(errs)} parts: mean {np.mean(errs):.3f} mm, worst {max(errs):.3f} mm")
     print(f"board check: {n} PLACED, {len(results) - n} MISSING of {len(results)}; photos in {img_dir}/ "
           f"(run `report` to review them with the rest)")
 

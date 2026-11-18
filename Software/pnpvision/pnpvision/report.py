@@ -10,7 +10,10 @@
                       accuracy = Y / (Y + N); the spec asks for >= 95 % of 100.
   sheet_<run>.jpg     contact sheet per run: each inspection photo, numbered, labelled with the
                       decision (same numbers as vision_review.csv), for quick review.
-  summary.txt         per run and totals: picks tried / good, per package, places, rejects.
+  cycles.csv          one row per part placed by run-job: phase times and cycle time (from the
+                      run's results/job_<stamp>.json), plus s/part and CPH per run in summary.txt.
+  summary.txt         per run and totals: picks tried / good, per package, places, rejects,
+                      cycle time / CPH, placement error (mm) from check-board.
 
 Older inspections were logged without their photo; they are matched to the run's photo folder
 (job_<stamp>/upNNNN.png or place_test_<stamp>/upN.png, the n-th inspection = the n-th photo).
@@ -102,7 +105,7 @@ def build(rows, base_dir="."):
     runs = defaultdict(list)
     for r in rows:
         runs[r["run"]].append(r)
-    vision, summary, placement = [], [], []
+    vision, summary, placement, cycles = [], [], [], []
     for run, evs in sorted(runs.items(), key=lambda kv: kv[1][0]["ts"]):
         folder = match_folder(evs[0]["ts"], folders)
         n_inspect = 0
@@ -118,7 +121,9 @@ def build(rows, base_dir="."):
                     "run": run, "n": sum(1 for x in placement if x["run"] == run) + 1,
                     "time": dt.datetime.fromtimestamp(e["ts"]).strftime("%Y-%m-%d %H:%M:%S"),
                     "ref": d.get("ref", ""), "decision": "PLACED" if e["ok"] else "MISSING",
-                    "green": d.get("green", ""), "photo": d.get("part_id", ""), "human_agrees": ""})
+                    "green": d.get("green", ""), "dx_mm": d.get("dx_mm", ""), "dy_mm": d.get("dy_mm", ""),
+                    "err_mm": d.get("err_mm", ""), "angle_err_deg": d.get("angle_err_deg", ""),
+                    "photo": d.get("part_id", ""), "human_agrees": ""})
                 continue
             if e["event"] != "inspect":
                 continue
@@ -134,6 +139,20 @@ def build(rows, base_dir="."):
                 "package": package_of(last_ref, d.get("size_mm")),
                 "photo": photo, "human_agrees": ""})
         kinds = Counter(e["event"] for e in evs)
+        timing = None
+        if folder:
+            rj = os.path.join(base_dir, "results", os.path.basename(folder) + ".json")
+            if os.path.exists(rj):
+                try:
+                    with open(rj, encoding="utf-8") as f:
+                        jr = json.load(f)
+                    timing = jr.get("timing")
+                    for r in jr.get("results", []):
+                        cycles.append({"run": run, "ref": r.get("ref", ""), "status": r.get("status", ""),
+                                       "attempts": r.get("attempts", ""), "cycle_s": r.get("cycle_s", ""),
+                                       **{f"t_{k}": v for k, v in (r.get("t") or {}).items()}})
+                except (OSError, ValueError):
+                    pass
         if kinds["board_check"] and not kinds["inspect"]:
             summary.append({"run": run, "start": dt.datetime.fromtimestamp(evs[0]["ts"]).strftime("%Y-%m-%d %H:%M"),
                             "type": "check-board", "picks": Counter(), "places": 0, "rejects": 0,
@@ -145,8 +164,8 @@ def build(rows, base_dir="."):
             "run": run, "start": dt.datetime.fromtimestamp(evs[0]["ts"]).strftime("%Y-%m-%d %H:%M"),
             "type": "run-job" if kinds["pick"] else ("place-test/inspect" if kinds["inspect"] else "other"),
             "picks": picks, "places": sum(1 for e in evs if e["event"] == "place" and e["ok"]),
-            "rejects": kinds["reject"], "decisions": dec, "folder": folder or ""})
-    return vision, summary, placement
+            "rejects": kinds["reject"], "decisions": dec, "folder": folder or "", "timing": timing})
+    return vision, summary, placement, cycles
 
 
 def summary_text(summary, vision, placement=()):
@@ -161,11 +180,16 @@ def summary_text(summary, vision, placement=()):
                        for pkg in sorted({p for p, _ in s["picks"]}))
         d = s["decisions"]
         if s["type"] == "check-board":
+            errs = [float(x["err_mm"]) for x in placement if x["run"] == s["run"] and x["err_mm"] not in ("", None)]
+            e = (f"  placement error {len(errs)} parts: mean {sum(errs) / len(errs):.3f} mm, worst {max(errs):.3f} mm"
+                 if errs else "")
             out.append(f"  {s['start']}  run {s['run']}  check-board        PLACED {d['PLACED']}  MISSING {d['MISSING']}"
-                       f"  photos {s['folder'] or 'not found'}")
+                       f"{e}  photos {s['folder'] or 'not found'}")
             continue
+        t = s.get("timing") or {}
+        cyc = (f"  {t['s_per_part']:.1f} s/part = {t['cph']:.0f} CPH" if t.get("s_per_part") and t.get("cph") else "")
         out.append(f"  {s['start']}  run {s['run']}  {s['type']:18s} picks {good}/{allp} ({rate}){' [' + pk + ']' if pk else ''}"
-                   f"  placed {s['places']}  rejects {s['rejects']}  vision PASS {d['PASS']} REJECT {d['REJECT']} "
+                   f"  placed {s['places']}{cyc}  rejects {s['rejects']}  vision PASS {d['PASS']} REJECT {d['REJECT']} "
                    f"EMPTY {d['EMPTY']}  photos {s['folder'] or 'not found'}")
     out.append("")
     out.append("Totals, run-job picks per package (good / tried):")
@@ -217,7 +241,7 @@ def contact_sheet(vision_rows, path, cell=220, cols=8, crop_frac=0.25):
 
 def write_report(db_path, out_dir, since=None, base_dir=".", sheets=True):
     rows = load_events(db_path, since)
-    vision, summary, placement = build(rows, base_dir)
+    vision, summary, placement, cycles = build(rows, base_dir)
     os.makedirs(out_dir, exist_ok=True)
     keys = sorted({k for r in rows for k in r["data"]})
     with open(os.path.join(out_dir, "events.csv"), "w", newline="", encoding="utf-8") as f:
@@ -233,7 +257,14 @@ def write_report(db_path, out_dir, since=None, base_dir=".", sheets=True):
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(vision)
-    pf = ["run", "n", "time", "ref", "decision", "green", "photo", "human_agrees"]
+    if cycles:
+        cf = ["run", "ref", "status", "attempts", "cycle_s"] + sorted({k for c in cycles for k in c if k.startswith("t_")})
+        with open(os.path.join(out_dir, "cycles.csv"), "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=cf, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(cycles)
+    pf = ["run", "n", "time", "ref", "decision", "green", "dx_mm", "dy_mm", "err_mm", "angle_err_deg",
+          "photo", "human_agrees"]
     with open(os.path.join(out_dir, "placement_review.csv"), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=pf)
         w.writeheader()
