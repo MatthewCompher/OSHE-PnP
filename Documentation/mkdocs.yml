@@ -1,0 +1,137 @@
+# OSHE Pick and Place documentation (MkDocs + Material for MkDocs).
+# Preview:  pip install -r Documentation/requirements-docs.txt
+#           mkdocs serve -f Documentation/mkdocs.yml        -> http://127.0.0.1:8000
+# Build:    mkdocs build -f Documentation/mkdocs.yml --strict  -> Documentation/site/
+site_name: OSHE Pick and Place
+site_description: An open-source pick-and-place machine built from an Ender 3, by the Open Source Hardware Enterprise at Michigan Tech.
+site_url: https://oshe-github.github.io/OSHE-PnP/
+repo_url: https://github.com/OSHE-Github/OSHE-PnP
+repo_name: OSHE-Github/OSHE-PnP
+edit_uri: edit/main/Documentation/docs/
+copyright: OSHE Pick and Place, Open Source Hardware Enterprise (oshe.io). Hardware CERN-OHL-S v2, software GPL-3.0, docs CC BY-SA 4.0.
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.footer
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  icon:
+    logo: material/chip
+
+plugins:
+  - search
+
+validation:
+  anchors: warn          # --strict then fails on a link to a missing #heading
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.keys
+  - pymdownx.mark
+
+extra:
+  social:
+    - icon: material/web
+      link: https://oshe.io
+      name: Open Source Hardware Enterprise
+    - icon: fontawesome/brands/github
+      link: https://github.com/OSHE-Github/OSHE-PnP
+
+nav:
+  - Home: index.md
+  - Get to Know It:
+      - How It Works: overview/index.md
+      - Specifications: overview/specs.md
+      - Safety: overview/safety.md
+      - Known Limitations: overview/limitations.md
+  - Build:
+      - build/index.md
+      - 1. Print the Parts: build/printing.md
+      - 2. Take Apart the Ender 3: build/teardown.md
+      - 3. Frame and Motion: build/mechanical.md
+      - 4. Electronics and Wiring: build/electronics.md
+      - 5. Pneumatics: build/pneumatics.md
+      - 6. Feeder Hardware: build/feeders.md
+  - Software Setup:
+      - software/index.md
+      - 1. Install from Scratch: software/install.md
+      - 2. Configuration Files: software/config-files.md
+      - 3. Touchscreen: software/touchscreen.md
+      - Updating: software/updating.md
+  - Calibration:
+      - calibration/index.md
+      - 1. Cameras: calibration/cameras.md
+      - 2. Motion and Homing: calibration/motion-homing.md
+      - 3. Nozzle and Up Camera: calibration/nozzle.md
+      - 4. Reject Bin and Feeders: calibration/bin-feeders.md
+      - Recovery Check: calibration/recovery.md
+  - Running Jobs:
+      - operate/index.md
+      - 1. Daily Startup: operate/startup.md
+      - 2. Make a Job: operate/make-a-job.md
+      - 3. Load Jobs from SD / USB: operate/load-jobs.md
+      - 4. Run a Job: operate/run-a-job.md
+      - 5. After the Job: operate/after-the-job.md
+      - 6. Shutdown: operate/shutdown.md
+  - Feeders:
+      - feeders/index.md
+      - Loading Tape: feeders/loading-tape.md
+      - Teaching a Feeder: feeders/teaching.md
+      - Testing and Troubleshooting: feeders/troubleshooting.md
+  - Guides:
+      - Speed Settings: guides/speed.md
+      - Nozzle Tips: guides/nozzle-tips.md
+      - Lighting: guides/lighting.md
+      - Macro Reference: guides/macros.md
+      - pnpvision Commands: guides/commands.md
+      - Moonraker and Cameras: guides/moonraker.md
+      - Job File Format: guides/job-format.md
+  - Testing & Results:
+      - testing/index.md
+      - Acceptance Tests: testing/acceptance.md
+      - Results: testing/results.md
+      - Sample Images and Data: testing/samples.md
+  - Help:
+      - Troubleshooting: help/troubleshooting.md
+      - FAQ: help/faq.md
+  - Project:
+      - project/index.md
+      - History (V1, V2): project/history.md
+      - Design Rationale: project/rationale.md
+      - Roadmap: project/roadmap.md
+      - Contributing and License: project/contributing.md
+      - Revision History: project/revisions.md
