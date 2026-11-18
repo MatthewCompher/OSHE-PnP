@@ -1022,8 +1022,19 @@ def _run_job(cfg, a, hmi):
             raise SystemExit(f"job not started: {prob[1]}")
         if back is not None:              # frame moved < ~2 mm: align-board's 3 mm search still finds pad A
             mr0.move_abs(x=float(back[0]), y=float(back[1]))
+    auto_align = cfg.get("run", {}).get("align_each_job") and not a.dry_run
+    if not a.align and not getattr(a, "no_align", False) and auto_align:
+        a.align = True                    # config: re-find the board before every job (not counted in CPH)
     if a.align:
         from types import SimpleNamespace
+        # start the camera on pad A where the last alignment found it: the 3 mm search then
+        # finds it even if the board crept a little (no jogging to pad A by hand)
+        last = (ms.get("board_pose") or {})
+        pa_name = job["alignment"][0]["name"] if job.get("alignment") else None
+        pad_a = next((p["machine"] for p in last.get("pads", []) if p.get("name") == pa_name), None)
+        if pad_a is not None and last.get("job_board") == job["board"]["name"]:
+            say(f"moving the down camera to pad {pa_name}, where the last alignment found it")
+            make_mr(cfg).move_abs(x=float(pad_a[0]), y=float(pad_a[1]))
         rot = a.rot
         if rot is None and ms.get("board_pose"):
             rot = round(BoardPose.from_dict(ms["board_pose"]["pose"]).angle_deg, 1)
@@ -1099,14 +1110,15 @@ def _run_job(cfg, a, hmi):
                    search_radius_mm=lc["search_radius_mm"])
         shots = [0]
 
-        def up_inspect(body):
+        def up_inspect(body, flip_check=False):
             img = up.frame()
             shots[0] += 1
             name = os.path.join(img_dir, f"up{shots[0]:04d}.png")
             cv2.imwrite(name, img)
             tol = float(rc.get("size_tol_mm", 0.3))   # per side
             return up.inspect(tuple(body) if body else None, tol, log_db, img=img, part_id=name,
-                              min_width_frac=float(rc.get("min_width_frac", 0.9)))
+                              min_width_frac=float(rc.get("min_width_frac", 0.9)),
+                              flip_check=flip_check and rc.get("flip_check", True))
 
         def recentre(tip):
             """New tip: find its bore over the up camera, move the stored centre and the
@@ -1364,6 +1376,8 @@ def main():
     p.add_argument("--align", action="store_true",
                    help="align the board first (down camera on alignment pad A); angle from --rot or the last alignment")
     p.add_argument("--rot", type=float, help="(with --align) rough board rotation, deg CCW")
+    p.add_argument("--no-align", action="store_true",
+                   help="skip the alignment even if config.toml [run] align_each_job is on")
     p.add_argument("--hmi", action="store_true",
                    help="started from the touchscreen (RUN_JOB macro): dialogs instead of keyboard prompts")
     p = sub.add_parser("make-launchers", help="write a PNP_<job>.gcode file per job into the print list, "

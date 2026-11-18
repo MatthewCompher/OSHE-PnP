@@ -244,6 +244,25 @@ def find_placed_part(ref, img, center_px, radius_px, expected_px, size_tol=0.2, 
     return PartMeasure((cx + x0, cy + y0), float(rw), float(rh), float(ang), float(cv2.contourArea(hull)))
 
 
+def interior_dark_fraction(img, pm, shrink=0.5, rel=0.8):
+    """Share of the part's inner half (a rectangle shrink x its size, same centre and angle) that is
+    darker than rel x the part's bright level (90th percentile over the whole part). A chip
+    resistor seen from below shows its white ceramic underside (interior ~ as bright as the
+    rim); picked upside down it shows its black top inside a white outline (2026-11-18: interior
+    ~150 vs ~247 of 255). Returns 0..1."""
+    g = _gray(img)
+    rect = (tuple(map(float, pm.center_px)), (float(pm.long_px), float(pm.short_px)), float(pm.angle_px_deg))
+    full = np.zeros(g.shape, np.uint8)
+    cv2.fillPoly(full, [cv2.boxPoints(rect).astype(np.int32)], 255)
+    inner = np.zeros(g.shape, np.uint8)
+    small = (rect[0], (rect[1][0] * shrink, rect[1][1] * shrink), rect[2])
+    cv2.fillPoly(inner, [cv2.boxPoints(small).astype(np.int32)], 255)
+    if not full.any() or not inner.any():
+        return 0.0
+    ref = float(np.percentile(g[full > 0], 90))
+    return float((g[inner > 0] < rel * ref).mean())
+
+
 def measure_part(img, nozzle_px, search_radius_px, min_area_px=200, expected_px=None):
     """Segment the part held on the nozzle (up camera) and fit a rotated rectangle.
 

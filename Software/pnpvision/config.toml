@@ -83,11 +83,13 @@ direction = -1.0
 z_feeds = { approach = 3000, touch = 1500, release_lift = 1500, lift = 3000, inspect = 3000 }
 # Speed tuning (2026-11-17). Change ONE line at a time, run 3-5 parts, compare the cycle line.
 # Values here are the old defaults, so nothing changes until you edit them.
-xy_feedrate = 24000
-accel = 5000
+xy_feedrate = 24000             # mm/min run-job X/Y travel (400 mm/s; printer.cfg allows 600 mm/s)
+accel = 5000                    # mm/s^2 during run-job (printer.cfg max_accel 7500); restored after
 vac_ms = 150                    # vacuum on -> lift at the pick
 release_ms = 200                # vacuum off -> lift at the place / reject bin
 verify = false                   # false = skip the empty-nozzle check after placing (~8 s)
+align_each_job = true           # re-find the board (align-board) before every job; not counted in CPH
+flip_check = true               # resistors: reject parts picked upside down (dark top facing the camera)
 # pick_press = 0.4              # mm below the taught part top at the pick
 # place_press = 0.3             # mm below the part top on the board at the place
 

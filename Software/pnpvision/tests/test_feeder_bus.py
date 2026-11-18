@@ -165,3 +165,34 @@ def test_part_on_its_side_is_rejected(monkeypatch, short_mm, ok):
     assert res["ok"] is ok
     if not ok:
         assert "on its side" in res["reason"]
+
+
+@pytest.mark.parametrize("flipped", [False, True])
+def test_upside_down_resistor_is_rejected(monkeypatch, flipped):
+    """White underside = right way up; black top inside a white outline = upside down (2026-11-18)."""
+    import cv2
+    import numpy as np
+    from types import SimpleNamespace
+    from pnpvision import upcam
+    from pnpvision.detect import PartMeasure
+    img = np.full((200, 200, 3), 110, np.uint8)                       # grey nozzle face
+    cv2.rectangle(img, (60, 80), (140, 120), (250, 250, 250), -1)     # 80 x 40 px chip, white
+    if flipped:
+        cv2.rectangle(img, (70, 86), (130, 114), (90, 90, 90), -1)    # black top showing
+    pm = PartMeasure((100.0, 100.0), 80.0, 40.0, 0.0, 3000.0)
+    monkeypatch.setattr(upcam, "measure_part", lambda *a, **k: pm)
+    mpp = 0.02
+    motion = SimpleNamespace(mm_per_px=mpp, offset_mm=lambda v: np.asarray(v) * mpp, direction_mm=lambda a: a)
+    lens = SimpleNamespace(newK=np.array([[1, 0, 100], [0, 1, 100], [0, 0, 1]], float))
+    cam = upcam.UpCam(None, lens, None, motion)
+    res = cam.inspect((1.6, 0.8), 0.3, img=img, flip_check=True)
+    assert res["ok"] is (not flipped)
+    if flipped:
+        assert "upside down" in res["reason"]
+    assert cam.inspect((1.6, 0.8), 0.3, img=img)["ok"]               # capacitors: no flip check
+
+
+def test_flip_check_only_for_resistors():
+    from pnpvision.parts import package_info
+    assert package_info("R_0603_1608Metric")["flip_check"]
+    assert not package_info("C_0603_1608Metric")["flip_check"]

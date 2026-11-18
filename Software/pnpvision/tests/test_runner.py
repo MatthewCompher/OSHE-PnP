@@ -127,7 +127,7 @@ class World:
                     self.held["u"] = rotate_xy(self.held["u"], d)
                     self.held["phi"] += d
 
-    def up_inspect(self, body):
+    def up_inspect(self, body, flip_check=False):
         self.t += INSPECT_S
         if self.held is None or np.linalg.norm(np.array(self.xyz[:2]) - UP_XY) > 0.01:
             return {"ok": False, "reason": "no part found"}

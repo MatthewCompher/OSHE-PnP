@@ -56,7 +56,10 @@ class Panel(ScreenPanel):
         self.running = None
         self.stop_armed = False
         self.job_names = None
-        self.opts = {"no_feeders": True, "align": False, "dry_run": False}
+        # 2026-11-18: feeders work (F1): "No feeders" defaults off. "Align first" defaults on and
+        # re-finds the board before the job (camera drives to pad A by itself; not counted in CPH);
+        # untick it to skip that for a board that hasn't moved.
+        self.opts = {"no_feeders": False, "align": True, "dry_run": False}
 
         # status: one line each (ellipsized), the status line at most two
         grid = Gtk.Grid(column_spacing=15, row_spacing=2, hexpand=True)
@@ -153,7 +156,10 @@ class Panel(ScreenPanel):
             text += "\nNo feeders: you load each part when asked."
         if self.opts["align"]:
             script += " ALIGN=1"
-            text += "\nAlign first: the down camera must be on alignment pad A."
+            text += "\nAlign first: the board is found again before placing."
+        else:
+            script += " ALIGN=0"
+            text += "\nNo alignment: uses the last board position."
         if self.opts["dry_run"]:
             script += " DRY_RUN=1"
         else:

@@ -56,6 +56,9 @@ def package_info(name, overrides=None):
     if not d:
         raise PackageError(f"package {name!r} unknown: add it to config.toml [packages]")
     d["body_mm"] = tuple(d["body_mm"])
+    # chip resistors: white underside, black top -> the up camera can tell upside down.
+    # Capacitors look the same on both sides: no check.
+    d.setdefault("flip_check", name.startswith("R_"))
     return d
 
 

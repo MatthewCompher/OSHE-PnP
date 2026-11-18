@@ -194,12 +194,12 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
         if w is not None and getattr(mr, "stream", False):
             w()
 
-    def look_up(tip, body):
+    def look_up(tip, body, flip=False):
         up = np.asarray(ms["up_cam_xy_mm"], float)
         mr.move_abs(x=float(up[0]), y=float(up[1]))
         mr.move_abs(z=tips[tip]["inspect_z"], feedrate=zf["inspect"])
         settle()                                   # the frame must be taken over the camera
-        return up_inspect(body)
+        return up_inspect(body, flip_check=True) if flip else up_inspect(body)
 
     def reject(rec, why):
         with timed(rec, "reject"):
@@ -256,7 +256,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                     lower_and("VALVE_ON", pick_z, vac_ms)
                     fd.after_pick()
                 with timed(rec, "inspect"):
-                    ins = look_up(tip, pkg["body_mm"])
+                    ins = look_up(tip, pkg["body_mm"], pkg.get("flip_check", False))
                 if looks_empty(ins, pkg["body_mm"]):
                     say(f"  pick {attempt}: nozzle empty ({ins.get('reason') or 'only the tip'})")
                     with timed(rec, "pick"):
@@ -294,7 +294,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                     coarse = wrap180(pose.part_angle(p["rot"]) - fd.d["tape_angle_deg"])
                     rotator.turn_part(coarse)
                     u = rotate_xy(u, coarse)
-                    ins = look_up(tip, pkg["body_mm"])
+                    ins = look_up(tip, pkg["body_mm"], pkg.get("flip_check", False))
                     if "offset_mm" not in ins:
                         rec["status"] = "part lost while turning"
                     else:
@@ -312,7 +312,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                             break
                         rotator.turn_part(d)
                         rec["turns"] += 1
-                        ins = look_up(tip, pkg["body_mm"])
+                        ins = look_up(tip, pkg["body_mm"], pkg.get("flip_check", False))
                         if "offset_mm" not in ins:
                             lost = True
                             break

@@ -70,7 +70,7 @@ def test_idle_page_and_start_script(tmp_path):
     p._start(mock.MagicMock(), "Test PCB-top")
     args = screen._confirm_send_action.call_args[0]
     assert args[2] == "printer.gcode.script"
-    assert args[3] == {"script": "RUN_JOB JOB=Test_PCB-top NO_FEEDERS=1 DRY_RUN=1"}, args[3]
+    assert args[3] == {"script": "RUN_JOB JOB=Test_PCB-top ALIGN=1 DRY_RUN=1"}, args[3]
     assert "Dry run" in args[1]
 
 
