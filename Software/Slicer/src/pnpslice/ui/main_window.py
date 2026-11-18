@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QC
 from .. import __version__
 from ..board import Board, BoardError, load_board
 from ..heights import SOURCE_LABELS, resolve_height
+from ..gcode import write_dryrun_gcode
 from ..job import build_job, default_filename, write_job
 from ..plate import Plate, build_plates
 from ..project import ProjectSettings
@@ -639,6 +640,12 @@ class MainWindow(QMainWindow):
         self.slice_btn.setToolTip("Check this plate and work out the placement order (Ctrl+R)")
         self.slice_btn.clicked.connect(self.slice_current)
         h.addWidget(self.slice_btn)
+        self.gcode_check = QCheckBox("+ dry-run G-code")
+        self.gcode_check.setToolTip("Export job… also writes <job>_dryrun.gcode next to the job file:\n"
+                                    "the placements as G-code moves in board coordinates")
+        self.gcode_check.setChecked(str(self.settings.value("export_gcode", "false")).lower() == "true")
+        self.gcode_check.toggled.connect(lambda on: self.settings.setValue("export_gcode", bool(on)))
+        h.addWidget(self.gcode_check)
         self.export_btn = QPushButton("Export job…")
         self.export_btn.setObjectName("primary")
         self.export_btn.setToolTip("Save the job file for this plate (Ctrl+E)")
@@ -885,11 +892,12 @@ class MainWindow(QMainWindow):
         try:
             job = build_job(self.board, res)
             write_job(path, job)
+            gpath = write_dryrun_gcode(path, job) if self.gcode_check.isChecked() else None
         except Exception as e:
             QMessageBox.warning(self, "Couldn't export", str(e))
             return
         self.settings.setValue("last_export_dir", os.path.dirname(path))
-        self.statusBar().showMessage(f"Saved {path}", 8000)
+        self.statusBar().showMessage(f"Saved {path}" + (f" and {os.path.basename(gpath)}" if gpath else ""), 8000)
 
     def edit_heights(self):
         if not self.plates:
