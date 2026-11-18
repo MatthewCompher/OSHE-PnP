@@ -137,3 +137,11 @@ def test_streaming_moves_skip_m400_and_position_queries(monkeypatch):
     mr.set_stream(False)
     mr.move_abs(z=30.0)
     assert sent[-1].endswith("M400")
+
+
+def test_odd_blob_is_not_empty_but_rings_are():
+    from pnpvision.runner import looks_empty
+    odd = {"ok": False, "reason": "no part found (best blob fill 0.71 is not a rectangle)", "fill": 0.71}
+    rings = {"ok": False, "reason": "no part found (best blob fill 0.40 is not a rectangle)", "fill": 0.40}
+    assert not looks_empty(odd, (1.6, 0.8))
+    assert looks_empty(rings, (1.6, 0.8))

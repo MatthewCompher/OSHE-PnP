@@ -50,11 +50,17 @@ class JobError(RuntimeError):
 EMPTY_TIP_FRAC = 0.75     # a blob whose long side is under this share of the part's is the bare tip
 
 
+ODD_FILL = 0.55          # a non-rectangular blob filling more than this is SOMETHING (a part on
+                         # its side / tilted), not the empty nozzle's rings (fill ~0.40): reject bin
+
+
 def looks_empty(ins, body):
     """True if the up camera saw nothing, or only the bare tip end: since 2026-11-17 (nozzle
-    refitted) the empty N08 tip reads as a ~0.85 x 0.8 mm blob, which is not an 0603/0805."""
+    refitted) the empty N08 tip reads as a ~0.85 x 0.8 mm blob, which is not an 0603/0805.
+    2026-11-18: a blob with fill 0.71 ("not a rectangle") was a part picked badly; calling it
+    empty dropped it over the up camera. Such blobs now go to the reject bin."""
     if "offset_mm" not in ins:
-        return True
+        return not (ins.get("fill") is not None and ins["fill"] >= ODD_FILL)
     if ins.get("ok") or not ins.get("size_mm") or not body:
         return False
     return max(ins["size_mm"]) < EMPTY_TIP_FRAC * max(body)

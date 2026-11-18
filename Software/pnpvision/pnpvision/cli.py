@@ -1011,7 +1011,7 @@ def _run_job(cfg, a, hmi):
             img = up.frame()
             shots[0] += 1
             cv2.imwrite(os.path.join(img_dir, f"up{shots[0]:04d}.png"), img)
-            tol = 0.3
+            tol = float(rc.get("size_tol_mm", 0.3))   # per side; an 0603 on its side is ~1.6 x 0.45
             return up.inspect(tuple(body) if body else None, tol, log_db, img=img)
 
         def recentre(tip):
