@@ -87,7 +87,9 @@ def _mounts(mounts_file):
 
 # -- copying ---------------------------------------------------------------------------------------
 def candidates(src):
-    """*.job.json in src and in its first-level folders (not hidden/system folders)."""
+    """*.json in src and in its first-level folders (not hidden/system folders). Job files are
+    normally *.job.json; a plain *.json is kept too (Windows save dialogs can drop the ".job" part)
+    and import_jobs decides from its contents."""
     out = []
     try:
         entries = sorted(os.listdir(src))
@@ -102,15 +104,26 @@ def candidates(src):
         except OSError:
             continue
         out += [os.path.join(folder, n) for n in names
-                if n.endswith(SUFFIX) and not n.startswith(".")       # macOS leaves ._name files
+                if n.lower().endswith(".json") and not n.startswith(".")   # macOS leaves ._name files
                 and os.path.isfile(os.path.join(folder, n))]
     return out
 
 
-def _problem(path, data):
+def job_name(name):
+    """File name in jobs/: 'X.job.json' stays, 'X.json' -> 'X.job.json'."""
+    if name.lower().endswith(SUFFIX):
+        return name[:-len(SUFFIX)] + SUFFIX
+    return name[:-len(".json")] + SUFFIX
+
+
+def _problem(path, data, name=None):
     """Why this file can't be a job (None if it can)."""
-    if not NAME_OK.match(os.path.basename(path)):
+    if not NAME_OK.match(name or os.path.basename(path)):
         return "name may only use letters, digits, space, _ . -"
+    return _not_a_job(data)
+
+
+def _not_a_job(data):
     try:
         job = json.loads(data.decode("utf-8"))
     except (UnicodeDecodeError, ValueError) as e:
@@ -131,7 +144,9 @@ def import_jobs(src, jobs_dir):
     os.makedirs(jobs_dir, exist_ok=True)
     out, seen = [], set()
     for path in candidates(src):
-        name = os.path.basename(path)
+        orig = os.path.basename(path)
+        plain = not orig.lower().endswith(SUFFIX)          # X.json: only if it really is a job
+        name = job_name(orig)
         if name in seen:
             out.append((name, "skipped: same name in two folders"))
             continue
@@ -144,7 +159,9 @@ def import_jobs(src, jobs_dir):
         except OSError as e:
             out.append((name, f"skipped: can't read ({e.strerror or e})"))
             continue
-        why = _problem(path, data)
+        if plain and _not_a_job(data):
+            continue                                          # some other .json on the stick: ignore
+        why = _problem(path, data, name)
         if why:
             out.append((name, "skipped: " + why))
             continue
