@@ -554,7 +554,7 @@ def cmd_place_test(cfg, a):
             img = up.frame()
             shots[0] += 1
             save(f"up{shots[0]}", img)
-            return up.inspect(tuple(size), a.tol, log, img=img)
+            return up.inspect(tuple(size), a.tol, log, img=img, part_id=os.path.join(img_dir, f"up{shots[0]}.png"))
 
         rotator = None
         if a.rotate_to is not None:
@@ -829,6 +829,71 @@ def cmd_feeder_cycle(cfg, a):
               f"pick rate = parts / {len(times)} (spec: 95 % = {int(np.ceil(0.95 * len(times)))}).")
 
 
+def cmd_report(cfg, a):
+    """Export the event log: CSVs, per-run pick / vision summary, photo contact sheets."""
+    from .report import write_report
+    since = dt_since(a.since)
+    out = a.out or time.strftime("report_%Y%m%d_%H%M%S")
+    print(write_report(C.rel(cfg, cfg["log"]["db"]), out, since=since, base_dir=os.getcwd(),
+                       sheets=not a.no_sheets))
+    print(f"\nwritten to {out}/ (events.csv, vision_review.csv, summary.txt, sheet_<run>.jpg)")
+
+
+def dt_since(s):
+    if not s:
+        return None
+    import datetime as _dt
+    return _dt.datetime.strptime(s, "%Y-%m-%d").timestamp()
+
+
+def cmd_check_board(cfg, a):
+    """Down camera over each footprint of the aligned board: is a part on it? (PLACED / MISSING)
+    Each check is logged (event board_check) with its photo, for `report` and human review."""
+    from .board import BoardPose
+    from .boardcheck import annotate, check_footprint, px_per_mm
+    from .runner import dry_run
+    path = _find_job(cfg, a.job)
+    with open(path, encoding="utf-8") as f:
+        job = json.load(f)
+    ms = MS.load(C.rel(cfg, "calibration/machine.json"))
+    bp = ms.get("board_pose")
+    if not bp:
+        raise SystemExit("no board pose: run align-board first")
+    pose = BoardPose.from_dict(bp["pose"])
+    mr = make_mr(cfg)
+    if not mr.is_homed():
+        raise SystemExit("not homed: VISION_HOME first")
+    bc = cfg.get("board_check", {})
+    log_db = EventLog(C.rel(cfg, cfg["log"]["db"]))
+    stamp = time.strftime("%Y%m%d_%H%M%S")
+    img_dir = f"board_check_{stamp}"
+    os.makedirs(img_dir, exist_ok=True)
+    cam, lens = open_cam(cfg, "down")
+    k = px_per_mm(MotionMap.load(C.rel(cfg, cfg["cameras"]["down"]["motion_map"])))
+    centre = (float(lens.newK[0, 2]), float(lens.newK[1, 2]))
+    results = []
+    try:
+        def look(xy, name):
+            mr.move_abs(x=float(xy[0]), y=float(xy[1]))
+            img = lens.undistort(cam.fresh(settle_s=cfg["moonraker"]["settle_s"]))
+            res = check_footprint(img, centre, k, window_mm=float(bc.get("window_mm", 0.6)),
+                                  green_max=float(bc.get("green_max", 0.5)))
+            photo = os.path.join(img_dir, name + ".png")
+            cv2.imwrite(photo, annotate(img, centre, k, res, window_mm=float(bc.get("window_mm", 0.6))))
+            ref = name.split("_", 1)[1]
+            log_db.log("board_check", ok=res["placed"], ref=ref, green=res["green"], reason=res["reason"],
+                       part_id=photo)
+            results.append((ref, res))
+            print(f"    {'PLACED ' if res['placed'] else 'MISSING'} (green {res['green']})")
+        dry_run(job, pose, look, cfg.get("packages", {}), set(a.only) if a.only else None)
+    finally:
+        cam.stop()
+        lift(mr, feedrate=600)
+    n = sum(1 for _, r in results if r["placed"])
+    print(f"board check: {n} PLACED, {len(results) - n} MISSING of {len(results)}; photos in {img_dir}/ "
+          f"(run `report` to review them with the rest)")
+
+
 def cmd_feed(cfg, a):
     bus = _feeder_bus(cfg)
     try:
@@ -1010,9 +1075,10 @@ def _run_job(cfg, a, hmi):
         def up_inspect(body):
             img = up.frame()
             shots[0] += 1
-            cv2.imwrite(os.path.join(img_dir, f"up{shots[0]:04d}.png"), img)
+            name = os.path.join(img_dir, f"up{shots[0]:04d}.png")
+            cv2.imwrite(name, img)
             tol = float(rc.get("size_tol_mm", 0.3))   # per side
-            return up.inspect(tuple(body) if body else None, tol, log_db, img=img,
+            return up.inspect(tuple(body) if body else None, tol, log_db, img=img, part_id=name,
                               min_width_frac=float(rc.get("min_width_frac", 0.9)))
 
         def recentre(tip):
@@ -1295,6 +1361,13 @@ def main():
     p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it (overrides the plate-layout default)")
     p.add_argument("--goto", action="store_true", help="move the nozzle over the bin in use (taught or default), save nothing")
     p.add_argument("--default", action="store_true", help="forget the taught bin, use the plate-layout default (and go there)")
+    p = sub.add_parser("check-board", help="down camera over each footprint: is a part on it? (aligned board)")
+    p.add_argument("job")
+    p.add_argument("--only", nargs="+", metavar="REF", help="check only these footprints")
+    p = sub.add_parser("report", help="export the event log: pick success, vision decisions + photos (CSV)")
+    p.add_argument("--since", help="only events from this date on, YYYY-MM-DD")
+    p.add_argument("--out", help="output folder (default report_<stamp>)")
+    p.add_argument("--no-sheets", action="store_true", help="skip the photo contact sheets")
     p = sub.add_parser("feeder-cycle", help="no vision: pick from a feeder and drop in the reject bin, N times")
     p.add_argument("feeder", help="e.g. F1")
     p.add_argument("--n", type=int, default=20)
@@ -1320,7 +1393,7 @@ def main():
     cfg = C.load(a.config)
     {"check-lens": cmd_check_lens, "snapshot": cmd_snapshot, "find-dot": cmd_find_dot, "focus-sweep": cmd_focus_sweep, "place-test": cmd_place_test,
      "set-offset": cmd_set_offset, "check-machine": cmd_check_machine, "make-launchers": cmd_make_launchers, "align-board": cmd_align_board, "run-job": cmd_run_job,
-     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed, "feeder-cycle": cmd_feeder_cycle,
+     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed, "feeder-cycle": cmd_feeder_cycle, "report": cmd_report, "check-board": cmd_check_board,
      "calibrate-motion": cmd_calibrate_motion, "calibrate-offset": cmd_calibrate_offset, "datum": cmd_datum,
      "repeatability": cmd_repeatability, "home": cmd_home,
      "light-test": cmd_light_test, "inspect-up": cmd_inspect_up}[a.cmd](cfg, a)
