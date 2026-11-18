@@ -762,6 +762,69 @@ def cmd_teach_bin(cfg, a):
           "teach-bin --default goes back to the default")
 
 
+def cmd_feeder_cycle(cfg, a):
+    """Feeder test without vision: pick from a feeder, drop it in the reject bin, advance the tape,
+    N times. Count the parts in the bin afterwards (pick rate = parts / N)."""
+    from .feeders import FeederBank
+    from .parts import feeder_part_top_z
+    from .runner import Z_FEEDS
+    mr = make_mr(cfg)
+    rc = cfg.get("run", {})
+    if rc.get("xy_feedrate"):
+        mr.feedrate = float(rc["xy_feedrate"])
+    zf = {**Z_FEEDS, **(rc.get("z_feeds") or {})}
+    pick_press = float(rc.get("pick_press", 0.4))
+    approach = float(rc.get("approach_mm", 0.8))
+    vac_ms, release_ms = int(rc.get("vac_ms", 300)), int(rc.get("release_ms", 500))
+    ms = MS.load(C.rel(cfg, "calibration/machine.json"))
+    tips = ms.get("tips") or {}
+    tip = a.tip or ms.get("current_tip")
+    bin_xy, src = reject_bin_xy(cfg, ms)
+    if bin_xy is None:
+        raise SystemExit("no reject bin (teach-bin, or the plate layout in config.toml)")
+    bus = _feeder_bus(cfg)
+    fd = FeederBank.load(_feeders_path(cfg), bus).get(a.feeder)
+    if fd is None:
+        raise SystemExit(f"feeder {a.feeder} not in {_feeders_path(cfg)}")
+    if fd.kind != "servo":
+        raise SystemExit(f"feeder {a.feeder} is a manual track, not a servo feeder")
+    pick_z = feeder_part_top_z(fd.d, tip, tips) + pick_press
+    if not (mr.safe_travel_z < pick_z <= 40.0):
+        raise SystemExit(f"pick Z {pick_z:.2f} outside Z{mr.safe_travel_z}..40")
+    xy = fd.pick_xy()
+    print(f"{a.n} cycles: {fd.id} (slot {fd.d['servo']}, {fd.package}) at X{xy[0]:.3f} Y{xy[1]:.3f} "
+          f"Z{pick_z:.2f} (tip {tip}) -> reject bin X{bin_xy[0]:.2f} Y{bin_xy[1]:.2f} ({src}); no vision")
+    if not a.yes and input("Machine homed, part in the pick pocket, bin empty? Start? [y/N] ").strip().lower() != "y":
+        return
+    times = []
+    try:
+        for i in range(1, a.n + 1):
+            t0 = time.time()
+            fd.ready()
+            mr.move_abs(x=float(xy[0]), y=float(xy[1]))
+            mr.move_abs(z=pick_z - approach, feedrate=zf["approach"])
+            mr.move_abs(z=pick_z, feedrate=zf["touch"])
+            mr.gcode(f"VALVE_ON\nG4 P{vac_ms}")
+            lift(mr, feedrate=zf["lift"])
+            fd.after_pick()                        # next part into the pocket
+            mr.move_abs(x=float(bin_xy[0]), y=float(bin_xy[1]))
+            mr.gcode(f"VALVE_OFF\nG4 P{release_ms}")
+            times.append(time.time() - t0)
+            print(f"  cycle {i}/{a.n}: {times[-1]:.1f} s")
+    except KeyboardInterrupt:
+        print("stopped")
+    finally:
+        try:
+            mr.gcode("VALVE_OFF")
+            lift(mr, feedrate=600)
+        except Exception as e:
+            print("could not release / lift:", e)
+        bus.close()
+    if times:
+        print(f"{len(times)} cycles, mean {np.mean(times):.1f} s. Count the parts in the bin: "
+              f"pick rate = parts / {len(times)} (spec: 95 % = {int(np.ceil(0.95 * len(times)))}).")
+
+
 def cmd_feed(cfg, a):
     bus = _feeder_bus(cfg)
     try:
@@ -1221,6 +1284,11 @@ def main():
     p = sub.add_parser("teach-bin", help="nozzle over the reject bin: save it (overrides the plate-layout default)")
     p.add_argument("--goto", action="store_true", help="move the nozzle over the bin in use (taught or default), save nothing")
     p.add_argument("--default", action="store_true", help="forget the taught bin, use the plate-layout default (and go there)")
+    p = sub.add_parser("feeder-cycle", help="no vision: pick from a feeder and drop in the reject bin, N times")
+    p.add_argument("feeder", help="e.g. F1")
+    p.add_argument("--n", type=int, default=20)
+    p.add_argument("--tip", help="tip on the nozzle (default: current_tip in machine.json)")
+    p.add_argument("--yes", action="store_true", help="don't ask before starting")
     p = sub.add_parser("feed", help="advance a servo feeder one part (FEEDER_TOGGLE SLOT=n)")
     p.add_argument("servo", type=int)
     p.add_argument("--times", type=int, default=1)
@@ -1241,7 +1309,7 @@ def main():
     cfg = C.load(a.config)
     {"check-lens": cmd_check_lens, "snapshot": cmd_snapshot, "find-dot": cmd_find_dot, "focus-sweep": cmd_focus_sweep, "place-test": cmd_place_test,
      "set-offset": cmd_set_offset, "check-machine": cmd_check_machine, "make-launchers": cmd_make_launchers, "align-board": cmd_align_board, "run-job": cmd_run_job,
-     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed,
+     "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed, "feeder-cycle": cmd_feeder_cycle,
      "calibrate-motion": cmd_calibrate_motion, "calibrate-offset": cmd_calibrate_offset, "datum": cmd_datum,
      "repeatability": cmd_repeatability, "home": cmd_home,
      "light-test": cmd_light_test, "inspect-up": cmd_inspect_up}[a.cmd](cfg, a)
