@@ -27,7 +27,7 @@ class UpCam:
         return grab_lit(self.cam, self.light, self.lens, self.settle_s,
                         self.ambient_subtract, self.keep_on)
 
-    def inspect(self, expected_mm=None, tol_mm=0.15, log=None, part_id=None, img=None):
+    def inspect(self, expected_mm=None, tol_mm=0.15, log=None, part_id=None, img=None, min_width_frac=None):
         """expected_mm=(length, width) of the part body; tol_mm applies to each dimension.
         Returns dict(ok, reason, offset_mm=[x,y] machine frame, angle_deg, size_mm=[L,W])."""
         img = self.frame() if img is None else img
@@ -61,6 +61,11 @@ class UpCam:
                 if any(bad):
                     res.update(ok=False, reason=f"size {size[0]:.2f}x{size[1]:.2f} mm vs "
                                                 f"expected {exp[0]:.2f}x{exp[1]:.2f}")
+                elif min_width_frac and size[1] < min_width_frac * exp[1]:
+                    # a chip on its side shows its THICKNESS as its width (0603: 0.58 measured vs
+                    # 0.87-0.96 flat, 2026-11-18); flat parts read ~0.1 mm wider than nominal
+                    res.update(ok=False, reason=f"too narrow: {size[1]:.2f} mm wide vs "
+                                                f"{exp[1]:.2f} expected (on its side?)")
         if log is not None:
             log.log("inspect", ok=res["ok"], part_id=part_id,
                     **{k: v for k, v in res.items() if k != "ok"})

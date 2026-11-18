@@ -1011,8 +1011,9 @@ def _run_job(cfg, a, hmi):
             img = up.frame()
             shots[0] += 1
             cv2.imwrite(os.path.join(img_dir, f"up{shots[0]:04d}.png"), img)
-            tol = float(rc.get("size_tol_mm", 0.3))   # per side; an 0603 on its side is ~1.6 x 0.45
-            return up.inspect(tuple(body) if body else None, tol, log_db, img=img)
+            tol = float(rc.get("size_tol_mm", 0.3))   # per side
+            return up.inspect(tuple(body) if body else None, tol, log_db, img=img,
+                              min_width_frac=float(rc.get("min_width_frac", 0.9)))
 
         def recentre(tip):
             """New tip: find its bore over the up camera, move the stored centre and the

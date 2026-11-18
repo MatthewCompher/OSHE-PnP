@@ -145,3 +145,23 @@ def test_odd_blob_is_not_empty_but_rings_are():
     rings = {"ok": False, "reason": "no part found (best blob fill 0.40 is not a rectangle)", "fill": 0.40}
     assert not looks_empty(odd, (1.6, 0.8))
     assert looks_empty(rings, (1.6, 0.8))
+
+
+@pytest.mark.parametrize("short_mm,ok", [(0.59, False), (0.58, False), (0.87, True), (0.96, True)])
+def test_part_on_its_side_is_rejected(monkeypatch, short_mm, ok):
+    """2026-11-18 data: an 0603 on its side read 1.82 x 0.59 mm; flat ones 1.65-1.70 x 0.87-0.96."""
+    import numpy as np
+    from types import SimpleNamespace
+    from pnpvision import upcam
+    from pnpvision.detect import PartMeasure
+    mpp = 0.01
+    motion = SimpleNamespace(mm_per_px=mpp, offset_mm=lambda v: np.asarray(v) * mpp, direction_mm=lambda a: a)
+    lens = SimpleNamespace(newK=np.array([[1, 0, 100], [0, 1, 100], [0, 0, 1]], float))
+    long_px, short_px = 1.70 / mpp, short_mm / mpp
+    monkeypatch.setattr(upcam, "measure_part",
+                        lambda *a, **k: PartMeasure((100.0, 100.0), long_px, short_px, 0.0, 0.93 * long_px * short_px))
+    cam = upcam.UpCam(None, lens, None, motion)
+    res = cam.inspect((1.6, 0.8), 0.3, img=np.zeros((200, 200, 3), np.uint8), min_width_frac=0.9)
+    assert res["ok"] is ok
+    if not ok:
+        assert "on its side" in res["reason"]
