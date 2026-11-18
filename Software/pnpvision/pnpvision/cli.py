@@ -1252,6 +1252,34 @@ def cmd_make_launchers(cfg, a):
             print("wrote", path)
 
 
+def cmd_import_jobs(cfg, a):
+    """Copy *.job.json from an SD card / USB stick (mounted read-only, then unmounted) into jobs/.
+    The result also goes to the touchscreen Job page (_PNP_STATE import_msg)."""
+    from . import usbjobs as U
+
+    def to_screen(msg):
+        try:
+            from .hmi import Hmi
+            Hmi(make_mr(cfg), echo=lambda *x: None)._setvars(import_msg="USB: " + msg)
+        except Exception as e:                       # no Klipper (laptop test): console only
+            print(f"(job page not updated: {e})")
+
+    jobs_dir = C.rel(cfg, "jobs")
+    try:
+        if a.from_dir:
+            results = U.import_jobs(a.from_dir, jobs_dir)
+        else:
+            results = U.import_from_device(jobs_dir, device=a.device)
+    except U.UsbError as e:
+        to_screen(str(e))
+        raise SystemExit(str(e))
+    for name, status in results:
+        print(f"  {name}: {status}")
+    msg = U.summary(results) + ("" if a.from_dir else ". You can remove the card.")
+    print(msg)
+    to_screen(msg)
+
+
 def cmd_hmi_test(cfg, a):
     """Shows one dialog on the touchscreen / Mainsail and reports which button was tapped.
     Nothing moves: for checking that action:prompt dialogs work on this screen."""
@@ -1385,6 +1413,10 @@ def main():
     p.add_argument("--gcodes", default=os.path.expanduser("~/printer_data/gcodes"),
                    help="Klipper's gcode folder (default ~/printer_data/gcodes)")
     p.add_argument("--no-feeders", action="store_true", help="launchers run with NO_FEEDERS=1")
+    p = sub.add_parser("import-jobs", help="copy *.job.json from an SD card / USB stick into jobs/ "
+                       "(mounted read-only, unmounted after)")
+    p.add_argument("--device", help="partition to read, e.g. /dev/sda1 (default: find the USB card/stick)")
+    p.add_argument("--from", dest="from_dir", help="copy from this folder instead (no mounting)")
     p = sub.add_parser("tip", help="record a nozzle tip's heights and/or make it the current tip")
     p.add_argument("name", help="e.g. N14")
     p.add_argument("--board-touch-z", type=float, help="Z where this tip touches the bare board top")
@@ -1433,7 +1465,7 @@ def main():
     a = ap.parse_args()
     cfg = C.load(a.config)
     {"check-lens": cmd_check_lens, "snapshot": cmd_snapshot, "find-dot": cmd_find_dot, "focus-sweep": cmd_focus_sweep, "place-test": cmd_place_test,
-     "set-offset": cmd_set_offset, "check-machine": cmd_check_machine, "make-launchers": cmd_make_launchers, "align-board": cmd_align_board, "run-job": cmd_run_job,
+     "set-offset": cmd_set_offset, "check-machine": cmd_check_machine, "make-launchers": cmd_make_launchers, "import-jobs": cmd_import_jobs, "align-board": cmd_align_board, "run-job": cmd_run_job,
      "tip": cmd_tip, "teach-feeder": cmd_teach_feeder, "teach-bin": cmd_teach_bin, "hmi-test": cmd_hmi_test, "feed": cmd_feed, "feeder-cycle": cmd_feeder_cycle, "report": cmd_report, "check-board": cmd_check_board,
      "calibrate-motion": cmd_calibrate_motion, "calibrate-offset": cmd_calibrate_offset, "datum": cmd_datum,
      "repeatability": cmd_repeatability, "home": cmd_home,

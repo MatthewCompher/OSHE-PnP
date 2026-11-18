@@ -6,7 +6,8 @@ It is opened from the "Pick & Place" menu (KlipperScreen_pnp.conf: panel: pnp_jo
 
 Three views (2026-11-18 rework):
   list    one scrolling row per job file (any number of jobs), a one-line machine status, and
-          "Running: <job>" at the top while a job runs (back to the status view).
+          "Running: <job>" at the top while a job runs (back to the status view), and
+          "Load jobs from SD card / USB stick" (PNP_IMPORT_JOBS; the list refreshes itself).
   detail  tap a job: board, parts to place, packages, which feeders hold them, the last run's
           result and CPH, estimated time; options No feeders / Align first / Dry run; Start
           (with a confirm) and Back to jobs.
@@ -154,6 +155,13 @@ class Panel(ScreenPanel):
         self.running_button.connect("clicked", self._show_status)
         self.running_button.set_no_show_all(True)              # only while a job runs (_show)
         box.pack_start(self.running_button, False, False, 0)
+        # SD card (USB reader) / USB stick -> jobs/ (PNP_IMPORT_JOBS, pnpvision import-jobs); the
+        # list refreshes itself (_poll) once the files are there.
+        self.import_button = self._gtk.Button("sd", "Load jobs from SD card / USB stick", "color2")
+        self.import_button.connect("clicked", self._import)
+        self.import_button.set_vexpand(False)
+        self.import_button.set_size_request(-1, self._row_height())
+        box.pack_start(self.import_button, False, False, 0)
         try:
             scroll = self._gtk.ScrolledWindow()               # KlipperScreen's touch-friendly one
         except Exception:
@@ -180,6 +188,11 @@ class Panel(ScreenPanel):
         except OSError as e:
             logging.error(f"pnp_job: {e}")
             return []
+
+    def _import(self, widget):
+        """Nothing moves and nothing on the Pi is overwritten: no confirm needed."""
+        self.list_status.set_text("USB: looking for the card...")
+        self._send(widget, "PNP_IMPORT_JOBS")
 
     def _fill_jobs(self):
         names = self._jobs()
@@ -388,6 +401,8 @@ class Panel(ScreenPanel):
             self.timer = None
 
     def _poll(self):
+        if self.view == "list" and not self.running:
+            self._fill_jobs()                  # new files (SD/USB import): one listdir, rebuilt only if changed
         try:
             self._screen._ws.send_method(
                 "printer.objects.query", {"objects": {STATE: None, "toolhead": ["homed_axes"]}}, self._on_status)
@@ -431,7 +446,8 @@ class Panel(ScreenPanel):
             self.running_button.show()
         else:
             last = f"   |   last: {job}, {result}" if job and result else ""
-            self.list_status.set_text(m + last)
+            usb = st.get("import_msg") or ""
+            self.list_status.set_text(f"{usb}   |   {m}{last}" if usb else m + last)
             self.running_button.hide()
         self._set_running(running)
         return False

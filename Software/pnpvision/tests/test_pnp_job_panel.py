@@ -189,3 +189,14 @@ def test_job_summary(tmp_path):
     assert s["last"]["cph"] == 527.1 and s["last"]["when"] == "11-18 13:39"
     assert abs(s["estimate_s"] - 23 * 6.83) < 1e-6
     assert not mod.job_summary("nope", str(jobs), str(feeders), str(res))["ok"]
+
+
+def test_usb_import_button_and_list_refresh(tmp_path):
+    mod, p, screen = _panel(tmp_path)
+    p._import(None)
+    screen._ws.api.gcode_script.assert_called_with("PNP_IMPORT_JOBS")
+    (tmp_path / "jobs" / "New board-top.job.json").write_text('{"placements": []}')
+    p._poll()                                              # list view: picks up the new file
+    assert p.job_names == ["New board-top", "Test PCB-top"]
+    p._show({"vision_homed": 1, "job_running": 0, "import_msg": "USB: loaded 1 job (New board-top)"}, "xyz")
+    assert p.list_status.text.startswith("USB: loaded 1 job")

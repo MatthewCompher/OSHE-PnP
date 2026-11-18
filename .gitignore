@@ -22,4 +22,6 @@ Software/pnpvision/results/
 Software/pnpvision/*.sqlite
 Software/pnpvision/*.tgz
 Software/pnpvision/calibration/feeders.json
+# jobs loaded from an SD card / USB stick under the name of a job already on the Pi (import-jobs)
+Software/pnpvision/jobs/*-usb.job.json
 *.tgz
