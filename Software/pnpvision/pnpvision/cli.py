@@ -922,6 +922,14 @@ def _run_job(cfg, a, hmi):
         return
     log_db = EventLog(C.rel(cfg, cfg["log"]["db"]))
     log = lambda event, ok=None, **d: log_db.log(event, ok=ok, **d)
+    rc = cfg.get("run", {})
+    if rc.get("xy_feedrate"):                    # run-job travel speed (vision moves keep [moonraker])
+        mr.feedrate = float(rc["xy_feedrate"])
+    old_accel = None
+    if rc.get("accel"):                          # gentler than printer.cfg max_accel: the part rides on vacuum
+        old_accel = mr.status("toolhead").get("max_accel")
+        mr.gcode(f"SET_VELOCITY_LIMIT ACCEL={float(rc['accel']):.0f}")
+    timing = {k: rc[k] for k in ("vac_ms", "release_ms", "pick_press", "place_press", "approach_mm") if k in rc}
     up_cam, up_lens = open_cam(cfg, "up")
     lc = cfg["lighting"]["up"]
     try:
@@ -969,7 +977,8 @@ def _run_job(cfg, a, hmi):
                           current_tip=a.tip or ms.get("current_tip"),
                           recentre=None if a.no_recentre else recentre,
                           reject_xy=reject_bin_xy(cfg, ms)[0], ask=ask, say=say, log=log, retries=a.retries,
-                          verify_empty=not a.no_verify, stats=stats,
+                          verify_empty=not a.no_verify and rc.get("verify", True), stats=stats,
+                          **timing,
                           stop_requested=hmi.stop_requested if hmi else None,
                           z_feeds=cfg.get("run", {}).get("z_feeds"),
                           show_pick=getattr(a, "show_pick", False),
@@ -982,6 +991,11 @@ def _run_job(cfg, a, hmi):
             lift(mr, feedrate=600)
         except Exception as e:
             print("could not lift the nozzle:", e)
+        if old_accel:
+            try:
+                mr.gcode(f"SET_VELOCITY_LIMIT ACCEL={float(old_accel):.0f}")
+            except Exception as e:
+                print("could not restore the acceleration:", e)
         up_cam.stop()
         bank.save(_feeders_path(cfg))          # keeps what the feeders learned
         bus.close()

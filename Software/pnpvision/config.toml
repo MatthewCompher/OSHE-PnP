@@ -81,6 +81,15 @@ direction = -1.0
 # mm/s). Leave a key out to use the default in runner.py. Old values, before 2026-11-14:
 # approach 300, touch 60, release_lift 60, lift 600, inspect 300.
 z_feeds = { approach = 1800, touch = 300, release_lift = 120, lift = 2400, inspect = 1800 }
+# Speed tuning (2026-11-17). Change ONE line at a time, run 3-5 parts, compare the cycle line.
+# Values here are the old defaults, so nothing changes until you edit them.
+xy_feedrate = 3000              # mm/min for run-job X/Y travel (printer.cfg allows 600 mm/s = 36000)
+accel = 7500                    # mm/s^2 during run-job (printer.cfg max_accel 7500); restored after
+vac_ms = 300                    # vacuum on -> lift at the pick
+release_ms = 500                # vacuum off -> lift at the place / reject bin
+verify = true                   # false = skip the empty-nozzle check after placing (~8 s)
+# pick_press = 0.4              # mm below the taught part top at the pick
+# place_press = 0.3             # mm below the part top on the board at the place
 
 [log]
 db = "pnp_events.sqlite"
