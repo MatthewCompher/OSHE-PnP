@@ -47,6 +47,19 @@ class JobError(RuntimeError):
     pass
 
 
+EMPTY_TIP_FRAC = 0.75     # a blob whose long side is under this share of the part's is the bare tip
+
+
+def looks_empty(ins, body):
+    """True if the up camera saw nothing, or only the bare tip end: since 2026-11-17 (nozzle
+    refitted) the empty N08 tip reads as a ~0.85 x 0.8 mm blob, which is not an 0603/0805."""
+    if "offset_mm" not in ins:
+        return True
+    if ins.get("ok") or not ins.get("size_mm") or not body:
+        return False
+    return max(ins["size_mm"]) < EMPTY_TIP_FRAC * max(body)
+
+
 def wrap180(a):
     return (float(a) + 180.0) % 360.0 - 180.0
 
@@ -230,8 +243,8 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                     fd.after_pick()
                 with timed(rec, "inspect"):
                     ins = look_up(tip, pkg["body_mm"])
-                if "offset_mm" not in ins:
-                    say(f"  pick {attempt}: nozzle empty ({ins.get('reason')})")
+                if looks_empty(ins, pkg["body_mm"]):
+                    say(f"  pick {attempt}: nozzle empty ({ins.get('reason') or 'only the tip'})")
                     with timed(rec, "pick"):
                         lift(mr, feedrate=zf["lift"])
                         mr.gcode("VALVE_OFF")
@@ -315,7 +328,7 @@ def run_job(job, pose, ms, mr, up_inspect, rotator, feeders, tips, packages=None
                     # 7.4 mm tip collar (a circle fills 0.785 of its box) and called it a part (2026-11-14)
                     chk = look_up(tip, pkg["body_mm"])
                     lift(mr, feedrate=zf["lift"])
-                if chk.get("ok") or "offset_mm" in chk:
+                if not looks_empty(chk, pkg["body_mm"]):
                     rec["status"] = "still on the nozzle after placing"
                     say(f"  {p['ref']}: part came back on the nozzle!")
                     reject(rec, rec["status"])

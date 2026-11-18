@@ -36,3 +36,13 @@ def test_cli_defaults_to_the_klipper_bus(monkeypatch):
     monkeypatch.setattr(cli, "make_mr", lambda cfg: FakeMR())
     assert isinstance(cli._feeder_bus({"feeders": {}}), KlipperFeederBus)
     assert isinstance(cli._feeder_bus({"feeders": {"bus": "klipper"}}), KlipperFeederBus)
+
+
+def test_bare_tip_blob_counts_as_empty():
+    from pnpvision.runner import looks_empty
+    tip = {"ok": False, "offset_mm": [0.0, 0.0], "size_mm": [0.87, 0.79], "reason": "size 0.87x0.79 mm vs expected"}
+    assert looks_empty(tip, (1.6, 0.8)) and looks_empty(tip, (2.0, 1.25))
+    assert looks_empty({"ok": False, "reason": "no part found"}, (1.6, 0.8))
+    assert not looks_empty({"ok": True, "offset_mm": [0, 0], "size_mm": [1.6, 0.8]}, (1.6, 0.8))
+    tilted = {"ok": False, "offset_mm": [0, 0], "size_mm": [1.9, 0.8]}       # a real part, wrong size
+    assert not looks_empty(tilted, (1.6, 0.8))
