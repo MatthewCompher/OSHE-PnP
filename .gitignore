@@ -30,3 +30,6 @@ Software/Slicer/pnpslice.spec
 # jobs loaded from an SD card / USB stick under the name of a job already on the Pi (import-jobs)
 Software/pnpvision/jobs/*-usb.job.json
 *.tgz
+
+# Claude Code session settings (local preview config etc.): personal, never commit
+.claude/

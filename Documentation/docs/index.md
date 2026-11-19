@@ -106,3 +106,5 @@ Made by students of the **Open Source Hardware Enterprise** at Michigan Technolo
 | **Project** | [Overview and Team](project/index.md) · [History (V1, V2)](project/history.md) · [Design Rationale](project/rationale.md) · [Roadmap](project/roadmap.md) · [Contributing and License](project/contributing.md) · [Revision History](project/revisions.md) |
 
 Use the search box at the top to find anything else.
+
+*Sponsored by **Harbor Country Marine**, New Buffalo, MI ([Project](project/index.md#sponsors)).*

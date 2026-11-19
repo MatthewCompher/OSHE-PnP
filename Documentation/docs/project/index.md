@@ -10,10 +10,16 @@ from readily available parts and with no specialized tools.
 
 ## Team
 
-| Semester | Members |
-|---|---|
-| Fall 2026 (V3) | Matthew Compher, Joey Pokuta, Jake Gorecki, Isaac Almeida |
-| Spring 2026 (V2) and Fall 2025 (V1) | Donn B, Matthew C, Raymond N, Toby C, Joseph P, Loyal S |
+**Current team (Fall 2026, V3):** Joey P and Matthew C (on the project since V1),
+Jake G and Isaac A (joined for V3).
+
+**Past contributors (V1 Fall 2025, V2 Spring 2026):** Donn B, Raymond N, Toby C, Loyal S.
+
+## Sponsors
+
+![Harbor Country Marine, New Buffalo, MI](../assets/harbor-country-marine.png){ width="320" }
+
+**Harbor Country Marine** (New Buffalo, MI) sponsors the project. Thank you!
 
 ## Pages
 
@@ -27,4 +33,5 @@ from readily available parts and with no specialized tools.
 
 [OpenPnP](https://openpnp.org), [LumenPnP](https://www.opulo.io) by Opulo (toolhead, and the shape
 of these docs), the Index, the [Voron](https://vorondesign.com) printers (CoreXY), and Mark Maker's
-work at [makr.zone](https://makr.zone) (0816 and PushPull feeders).
+work at [makr.zone](https://makr.zone) (the PushPull feeder used in V2), and mgrl's
+[0816 feeder](https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder) (V3 feeders).

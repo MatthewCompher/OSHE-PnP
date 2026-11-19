@@ -44,7 +44,7 @@ under the same licenses.
 | Used | From | License |
 |---|---|---|
 | Toolhead design basis | LumenPnP by Opulo | see Opulo's LumenPnP repository (compatibility with CERN-OHL-S being checked) |
-| Feeder | 0816 low-profile feeder, Mark Maker's version | see the original project |
+| Feeder | 0816 feeder by mgrl (mgrl.de), via a low-profile remix on MakerWorld, modified by us | see the original project and the MakerWorld page |
 | CoreXY layout | inspired by Voron 2.3 (no parts copied) | GPL-3.0 |
 | Firmware and host | Klipper, Moonraker, Mainsail, KlipperScreen, crowsnest | GPL-3.0 |
 | Light effects | klipper-led_effect | GPL-3.0 |

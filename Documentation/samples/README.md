@@ -10,7 +10,7 @@ side, 0603 resistors from feeder F1). Everything the machine writes stays on the
 | `pass_0603_on_nozzle.jpg` | PASS | 0603 flat, white ceramic underside, right size |
 | `reject_0603_on_its_side.jpg` | REJECT | 0.55 mm wide instead of ~0.9: standing on its side (min_width_frac check) |
 | `empty_nozzle_bare_tip.jpg` | EMPTY | only the N08 tip end (~0.85 x 0.8 mm blob): no part picked |
-| `upside_down_0603.jpg` *(if present)* | REJECT (since 2026-11-18) | black top facing the camera inside a white outline (flip_check) |
+| `upside_down_0603.png` | REJECT (since 2026-11-18) | black top facing the camera inside a white outline (flip_check) |
 
 ## down_camera/ — the board, seen from above
 | File | What |

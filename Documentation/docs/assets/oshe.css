@@ -154,11 +154,15 @@
 @media screen and (max-width: 600px) {
   .oshe-hero-logo { width: 72px; }
 }
-.md-copyright img.oshe-footer-logo {
-  height: 1.4em !important;
-  width: auto !important;
-  vertical-align: middle;
+/* footer logo via CSS (path relative to this file, so it works on any domain) */
+.md-copyright::before {
+  content: "";
+  display: inline-block;
+  width: 1.5em;
+  height: 1.4em;
   margin-right: 0.4em;
+  vertical-align: middle;
+  background: url("oshe-logo.png") no-repeat center / contain;
 }
 .md-copyright a { color: var(--oshe-gold); }
 

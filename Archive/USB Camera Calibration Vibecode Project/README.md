@@ -7,10 +7,14 @@ This directory contains the tools used to calibrate the PnP's USB cameras and re
 * **Cameras:**
     * **Down camera:** Arducam 12MP USB (M12 manual-focus lens), mounted on the toolhead gantry. **Calibrated.**
     * **Up camera:** InnoMaker 720P USB, 120° DFOV, mounted on the staging plate. **Calibrated.**
-* **Status:** **Optional.** The PnP works without it, but camera calibration improves vision accuracy.
+* **Status:** **Still used by V3.** pnpvision needs each camera's lens calibration (`.npz`), and the
+  `undistort-down` / `undistort-up` services on the Pi run `undistort_stream.py` from this folder.
 
-## ⚠️ Why is this archived?
-This utility is only useful to advanced users and needs a specific setup. Understanding the process and applying it to your own system is recommended, but it is not required for basic PnP functionality.
+## ⚠️ Why is it in Archive?
+It started as a side project ("vibecode") before pnpvision existed, so it lives here, but the
+machine still depends on it: **don't move or rename this folder** without updating the two
+undistort services on the Pi (their paths point here). A new machine needs it once per camera
+(see [Calibration](../../Documentation/docs/calibration/cameras.md)).
 
 ## 📂 Contents
 * `calib_capture.py`: Capture and calibration program. Runs headless on the Pi.

@@ -9,7 +9,6 @@ repo_url: https://github.com/OSHE-Github/OSHE-PnP
 repo_name: OSHE-Github/OSHE-PnP
 edit_uri: edit/main/Documentation/docs/
 copyright: >-
-  <img src="/OSHE-PnP/assets/oshe-logo.png" alt="" class="oshe-footer-logo">
   A project of the <a href="https://oshe.io">Open Source Hardware Enterprise (oshe.io)</a>, Michigan Tech.
   Hardware CERN-OHL-S v2, software GPL-3.0, docs CC BY-SA 4.0.
 

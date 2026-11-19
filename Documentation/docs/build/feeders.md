@@ -1,7 +1,7 @@
 # 6. Feeder Hardware
 
-V3 uses a modified version of Mark Maker's **0816 low-profile tape feeder**, adapted to standard
-fasteners. A hobby servo pushes a lever that advances the tape by one pocket (4 mm for 0603/0805
+V3 uses the **0816 tape feeder** (original design by mgrl), via a low-profile worm-gear remix from
+MakerWorld that we modified further to fit standard fasteners. A hobby servo pushes a lever that advances the tape by one pocket (4 mm for 0603/0805
 paper tape). Files: `CAD/V3-Active/Feeder` (left end, right end, rib).
 
 1. Print one set of feeder parts per feeder.

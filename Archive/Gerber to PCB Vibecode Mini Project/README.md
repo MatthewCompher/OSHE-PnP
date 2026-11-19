@@ -8,7 +8,7 @@ This is a lightweight, browser-based utility designed to convert PCB Gerber file
 
 * **Function:** It parses the aperture and coordinate data from Gerber files to generate toolpaths for component placement or basic PCB isolation milling.
 * **Usage:** Open the `index.html` file in any modern web browser to access the interface.
-* **Status:** **Legacy / Unmaintained.**
+* **Status:** **Legacy / Unmaintained.** Replaced by **pnpslice** (`Software/Slicer`), which reads the KiCad board directly.
 ## ⚠️ Why is this archived?
 As the project transitioned to **Version 2.0 (Spring 2026)**, the workflow shifted toward integrated coordinate exports from EDA software (like KiCad) and sophisticated Klipper macros. While this tool remains functional for basic conversions, it does not support the advanced safety checks, variable spool offsets, or vacuum logic found in the current V2.0 software stack.
 

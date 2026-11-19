@@ -2,8 +2,9 @@
 
 The contract between a **job generator** (a "slicer" that reads KiCad output) and the
 **pnpvision job runner** on the machine. A generator that writes files exactly as described
-here will work with the runner. Status: **v1 draft (2026-11-09)**. The runner (roadmap step 7)
-is not written yet; it will be built against this document. Any change bumps the version.
+here will work with the runner. Status: **v1, in use** (written 2026-11-09; the pnpvision runner and the
+pnpslice slicer both implement it, and ran the V3 acceptance tests on 2026-11-18). Any
+incompatible change bumps the version.
 
 ## The split of responsibilities
 
@@ -133,17 +134,22 @@ Rules:
 
 ## Optional: preview G-code
 
-A generator may also write a separate **preview** `.gcode` (moves only: no vision, no vacuum)
-for dry runs and G-code viewers. It is not used by the runner. If it targets this machine:
-mm, `G90`; X 0–235 left to right, Y 0–343 away from the front; **Z is inverted (larger Z =
-nozzle lower)**: travel at Z ≤ 30, PCB top ≈ Z 38; rotation is
-`MANUAL_STEPPER STEPPER=stepper_r MOVE=<deg>`; start with `VISION_HOME`. The board's position
-on the plate must then be an explicit input of the preview tool.
+A generator may also write a separate **preview** `.gcode` (moves only: no vision, no vacuum).
+It is not used by the runner. pnpslice's `--gcode` / **+ dry-run G-code** writes the placements in
+**board coordinates** as `PNP_BOARD_MOVE X= Y=` lines (applying the machine's board alignment is
+left to a macro, like a CNC work offset; those `PNP_*` macros are not on the machine yet). A tool
+that writes **machine** coordinates instead must take the board's position on the plate as an
+explicit input and respect: mm, `G90`; X 0–235 left to right, Y 0–343 away from the front;
+**Z is inverted (larger Z = nozzle lower)**: travel at Z 26 (Z 22 in front of Y 30, where the
+feeders are), PCB top ≈ Z 39.5 with the N08 tip; rotation is
+`MANUAL_STEPPER STEPPER=stepper_r MOVE=<deg>`; start with `VISION_HOME`.
 
 ## Validation and versioning
 
-- A checker (`python -m pnpvision check-job file.json`) is planned so generators can validate
-  output without the machine. Until then, follow the rules above literally.
+- pnpslice validates every file it writes against these rules (`pnpslice.job.validate_job`,
+  tested on this document's own example). A standalone `pnpvision check-job` command is still an
+  idea; until then, other generators should follow the rules above literally.
 - `format` changes to `oshe-pnp-job/2` for any incompatible change, with a changelog here.
-- Open points that may still change before the runner exists: the machine-side rotation
-  sense of `stepper_r` (runner-internal), feeder/tray id conventions.
+- Settled since the draft: the rotation sense is runner-internal (`config.toml [rotation]
+  direction`); feeder ids are the machine's own (`F1`, ...), assigned at the machine from
+  `calibration/feeders.json` when a placement has no `feeder`.
