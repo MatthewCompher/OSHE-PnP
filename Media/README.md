@@ -2,8 +2,8 @@
 
 | Component Focus | Snapshot | Key Detail |
 | :--- | :---: | :--- |
-| **Tool Head** | ![img](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/ToolheadAssembly.PNG?raw=true) | Fully 3D-printable supporting 4-axes |
-| **Clamping** | ![img](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/ClampingAssembly.PNG?raw=true) | PCB securing, fully 3D printed clamping mechanism, fitting within T-slots |
-| **Electrical Enclosure** | ![img](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/ElectricalEnclosureAssembly.PNG?raw=true) | The brains; houses Pi 5 & OctoPro |
-| **Organized Setup** | ![img](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/organizedSetup.jpg?raw=true) | Real-life build |
-| **Master Shot** | ![img](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/MasterRender.PNG?raw=true) | Render shot complete with every subassembly |
+| **Tool Head** | ![img](V2/ToolheadAssembly.PNG) | Fully 3D-printable supporting 4-axes |
+| **Clamping** | ![img](V2/ClampingAssembly.PNG) | PCB securing, fully 3D printed clamping mechanism, fitting within T-slots |
+| **Electrical Enclosure** | ![img](V2/ElectricalEnclosureAssembly.PNG) | The brains; houses Pi 5 & OctoPro |
+| **Organized Setup** | ![img](V2/organizedSetup.jpg) | Real-life build |
+| **Master Shot** | ![img](V2/MasterRender.PNG) | Render shot complete with every subassembly |

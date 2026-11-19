@@ -18,6 +18,11 @@ compressor (auto-cycling, ~60 psi) -> solenoid valve (Octopus FAN1, PD12)
 pnpvision switches the valve itself: vacuum on 150 ms before lifting at the pick, off 200 ms
 before lifting at the place (`config.toml [run] vac_ms / release_ms`).
 
+!!! warning "Noise"
+    Mount the compressor away from where the operator stands (on a soft pad to cut vibration) and
+    fit a **silencer** on the venturi's exhaust port. Even so, wear hearing protection during long
+    runs: see [Safety](../overview/safety.md#hazards-and-how-they-are-handled).
+
 !!! warning "Ongoing"
     Compressor, valve and venturi part numbers and the regulator setting are being added to the
     V3 BOM.

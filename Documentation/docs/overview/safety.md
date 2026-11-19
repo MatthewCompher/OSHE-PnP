@@ -23,6 +23,15 @@ upgrade ([Roadmap](../project/roadmap.md)).
 **Stop job** (on the Job page) is the gentle stop: the job ends cleanly after the current part.
 It needs two taps so it can't be hit by accident.
 
+!!! warning "Hearing: wear protection during extended use"
+    The compressor and the venturi's exhaust are loud, and during a job the vacuum switches on and
+    off every few seconds. Noise above **85 dBA** over a working day can cause permanent hearing
+    loss (NIOSH recommended limit: 85 dBA averaged over 8 hours; every +3 dB halves the safe time).
+    **Wear ear plugs or ear muffs during long runs**, and whenever the level at your position is
+    above 85 dBA. Measure it with a sound-level meter app (for example the free NIOSH SLM app) at
+    the operator's position. Keep the compressor away from where people stand, and fit a silencer
+    (muffler) on the venturi's exhaust port.
+
 ## Hazards and how they are handled
 
 Approach: ISO 12100 style. For each hazard, first design it out, then guard or limit it, then warn.
@@ -35,6 +44,7 @@ Approach: ISO 12100 style. For each hazard, first design it out, then guard or l
 | Unexpected motion from the network | whole machine | Moonraker trusts the local network: connect it only to a network you trust; a running job blocks other machine buttons |
 | Electrical (24 V, mains supply) | electronics enclosure | Electronics enclosed; 24 V line fused; switch off and unplug before opening |
 | Compressed air (about 60 psi) | compressor, tubing, valve, venturi | The valve closes on power loss or any Klipper fault (`shutdown_value: 0`); switch the compressor off and bleed the line before disconnecting tubing |
+| Noise (hearing) | compressor, venturi exhaust | compressor placed away from the operator; silencer on the venturi exhaust; **hearing protection for extended use** or above 85 dBA |
 | Heat | stepper drivers | No heaters on the machine; drivers run at 0.5 - 1.0 A, well below the TMC5160 limits; board fan output (FAN0) |
 | Small parts | reject bin, feeders | 0603/0805 parts are tiny: keep the reject bin emptied and away from children |
 
@@ -46,7 +56,9 @@ Approach: ISO 12100 style. For each hazard, first design it out, then guard or l
 - Before jogging by hand, lift the nozzle to Z 30 or higher (a smaller number) - the reject bin
   (15 mm), datum (11 mm) and PCB mounts (8 - 10 mm) stick up from the plate.
 - Switch off and unplug the supply before maintenance; switch off the compressor and bleed the air.
-- No PPE is needed for normal operation. Use eye protection when working on pressurized tubing.
+- **Wear hearing protection** (ear plugs or muffs) during extended runs; for a short job near a
+  quiet compressor it is optional - measure if unsure.
+- Use eye protection when working on pressurized tubing. No other PPE is needed.
 
 ## After an emergency stop
 

@@ -4,7 +4,8 @@
    reject bin emptied; tape loaded in F1 ([Loading Tape](../feeders/loading-tape.md)).
 2. **Power on** the 24 V supply and the servo 5 V supply. The Pi boots in about a minute; the
    touchscreen shows KlipperScreen.
-3. **Compressor on.** Let it reach pressure (it cycles by itself).
+3. **Compressor on.** Let it reach pressure (it cycles by itself). For a long session, put on
+   **hearing protection** ([why](../overview/safety.md)).
 4. Touchscreen -> **Pick & Place -> Vision home.** The machine homes Z, Y and X, then the down
    camera centres on datum dot 0. Wait for its result message (about 20 s).
 5. Lights: the down light is on from boot. Turn the **up light** on (Pick & Place -> Lights) if it

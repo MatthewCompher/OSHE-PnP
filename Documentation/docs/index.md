@@ -29,6 +29,11 @@ Made by students of the **Open Source Hardware Enterprise** at Michigan Technolo
 <div><strong>331 / 331</strong><span>vision decisions correct</span></div>
 </div>
 
+<figure class="oshe-video" markdown>
+<video src="assets/media/job-realtime.mp4" autoplay loop muted playsinline></video>
+<figcaption>Three 0603 resistors placed at real speed (about 7 s each), then the finished board.</figcaption>
+</figure>
+
 !!! info "Project state: functional prototype (V3, Fall 2026)"
     The machine runs complete jobs from the touchscreen: feeder, pick, camera check, place.
     The build guide, bill of materials and wiring diagram for V3 are still being written

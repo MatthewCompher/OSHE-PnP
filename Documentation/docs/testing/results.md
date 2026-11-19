@@ -14,6 +14,11 @@ Final acceptance runs, 2026-11-18. Procedure and conditions: [Acceptance Tests](
 | 6 | Placement error | report | mean **0.075 - 0.094 mm** per board, worst **0.229 mm** | - |
 | 7 | Continuous operation | 4 runs | 92 parts back to back, no repair or recalibration | pass |
 
+<figure class="oshe-video" markdown>
+<video src="../../assets/media/job-realtime.mp4" controls loop muted playsinline></video>
+<figcaption>Part of a 23-part run at real speed, then the finished board.</figcaption>
+</figure>
+
 ## Runs
 
 | Run | Placed | Picks | s/part | CPH | Rejects | Board check | Mean error | Worst |

@@ -32,3 +32,5 @@
 | Component tape (8 mm paper) | see [Loading Tape](../feeders/loading-tape.md) |
 | Hobby servos | the weak point of the feeders: keep a spare |
 | Compressor | drain any water trap as its manual says |
+| Venturi silencer | replace if clogged (vacuum gets weaker) or missing (noise) |
+| Hearing protection | ear plugs or muffs for operators of long runs |

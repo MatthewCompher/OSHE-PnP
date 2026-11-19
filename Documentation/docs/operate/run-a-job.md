@@ -32,6 +32,7 @@
 ## During the job
 
 - The red **JOB RUNNING** line means: hands out of the work area.
+- Long runs: wear **hearing protection** (compressor and vacuum exhaust).
 - **Questions** (load a part, swap a tip, retry?) open as dialogs: answer on the screen.
 - **Stop job** (two taps): ends cleanly after the current part.
 - **EMERGENCY STOP**: stops everything now ([Safety](../overview/safety.md)).

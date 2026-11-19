@@ -3,6 +3,10 @@
 Everyday use, once the machine is built, set up and calibrated. A normal day needs only the
 touchscreen.
 
+![One part, real time: feed, pick, up-camera check, place](../assets/media/one-part-realtime.gif){ .oshe-gif }
+
+*One part in real time (about 7 s): feed, pick, check over the up camera, turn, place.*
+
 1. [Daily startup](startup.md): power on, Vision home, lights.
 2. [Make a job](make-a-job.md): KiCad board -> pnpslice -> job file.
 3. [Load jobs from SD / USB](load-jobs.md): get the job onto the machine without a network.

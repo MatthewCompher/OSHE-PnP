@@ -29,6 +29,8 @@ What V3 can't do yet, or does with a caveat. Each item is also on the [Roadmap](
 
 ## Machine
 - **Software emergency stop only** (see [Safety](safety.md)).
+- **Noise**: the compressor and the venturi exhaust are loud; the sound level has not been measured
+  yet. Wear hearing protection for long runs.
 - The Pi 4 has 1 GB of memory: large installs must be done over SSH with the touchscreen stopped.
 - Moonraker accepts commands from the whole local network without a login.
 - No measured long-term (multi-hour) run yet; the longest recorded run is four 23-part jobs back to

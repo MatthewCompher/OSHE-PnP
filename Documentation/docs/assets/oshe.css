@@ -161,3 +161,15 @@
   margin-right: 0.4em;
 }
 .md-copyright a { color: var(--oshe-gold); }
+
+/* Job video and GIFs */
+.oshe-video video {
+  width: 100%;
+  border-radius: 12px;
+  border: 2px solid var(--oshe-gold);
+}
+.md-typeset img.oshe-gif {
+  border-radius: 12px;
+  max-width: 480px;
+  width: 100%;
+}

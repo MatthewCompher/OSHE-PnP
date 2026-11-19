@@ -7,7 +7,9 @@
 
 <div align="center">
 
-![Physical Model](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/setup.jpg?raw=true)
+![V3 placing 0603 resistors at real speed](Documentation/docs/assets/media/job-realtime.gif)
+
+*V3 placing 0603 resistors at real speed: feed, pick, up-camera check, place.*
 
 </div>
 
