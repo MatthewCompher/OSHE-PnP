@@ -62,7 +62,8 @@ class MotionMap:
 
     # -- persistence -------------------------------------------------------
     def save(self, path):
-        Path(path).write_text(json.dumps({"M": self.M.tolist(), "moving": self.moving}, indent=2))
+        from .machine_state import write_json_atomic
+        write_json_atomic(path, {"M": self.M.tolist(), "moving": self.moving})
 
     @classmethod
     def load(cls, path):

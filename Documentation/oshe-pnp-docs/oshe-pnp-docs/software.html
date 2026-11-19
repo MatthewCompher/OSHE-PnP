@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Software Stack & Klipper Setup | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html" aria-current="page">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>Software Stack &amp; Klipper Setup</h1>
+
+        <p>The machine runs a 3D-printer software stack adapted for SMT assembly, plus two programs
+        written for this project: <strong>pnpslice</strong> (on your computer) and
+        <strong>pnpvision</strong> (on the Pi).</p>
+
+        <figure class="img-slot" data-src="images/sw-stack-diagram.png" data-alt="Diagram of the software stack: laptop (KiCad, pnpslice) → Pi (pnpvision, Moonraker, Klipper host, crowsnest, Mainsail, KlipperScreen) → Octopus Pro / Uno / Nano">
+              <div class="img-placeholder">Image placeholder: Diagram of the software stack: laptop (KiCad, pnpslice) → Pi (pnpvision, Moonraker, Klipper host, crowsnest, Mainsail, KlipperScreen) → Octopus Pro / Uno / Nano<br><code>images/sw-stack-diagram.png</code></div>
+            </figure>
+
+        <h2 id="the-stack">The stack</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Layer</th><th>What it does</th><th>Runs on</th><th>More</th></tr></thead>
+          <tbody>
+            <tr><td>Klipper</td><td>Firmware: motion, steppers, pins and G-code macros</td><td>Pi (host) + Octopus Pro and Uno (MCUs)</td><td><a href="macros.html">G-code Macros</a></td></tr>
+            <tr><td>Moonraker</td><td>Web API between Klipper and everything else</td><td>Pi</td><td><a href="moonraker.html">Moonraker</a></td></tr>
+            <tr><td>Mainsail</td><td>Web dashboard in a browser</td><td>Pi</td><td>-</td></tr>
+            <tr><td>KlipperScreen</td><td>Touchscreen interface</td><td>Pi</td><td>-</td></tr>
+            <tr><td>crowsnest</td><td>Streams both USB cameras</td><td>Pi</td><td><a href="moonraker.html#cameras">Cameras</a></td></tr>
+            <tr><td>pnpvision</td><td>Vision calibration, board alignment, job runner</td><td>Pi</td><td><a href="vision.html">Vision</a></td></tr>
+            <tr><td>pnpslice</td><td>Turns a KiCad board into job files</td><td>Your computer</td><td><a href="slicer.html">Slicer</a></td></tr>
+            <tr><td>feeder_nano</td><td>Feeder servo firmware</td><td>Arduino Nano</td><td><a href="vision.html#feeders">Feeders</a></td></tr>
+          </tbody>
+        </table></div>
+
+        <figure class="img-slot" data-src="images/sw-mainsail.png" data-alt="Screenshot of the Mainsail dashboard with both camera views">
+              <div class="img-placeholder">Image placeholder: Screenshot of the Mainsail dashboard with both camera views<br><code>images/sw-mainsail.png</code></div>
+            </figure>
+
+        <h2 id="1-install-mainsailos-on-the-pi">1. Install MainsailOS on the Pi</h2>
+        <ol>
+          <li>Download and open <a href="https://www.raspberrypi.com/software/">Raspberry Pi Imager</a>.</li>
+          <li><strong>Choose Device:</strong> Raspberry Pi 4.</li>
+          <li><strong>Choose OS:</strong> Other specific-purpose OS → 3D printing → Mainsail OS (latest).</li>
+          <li><strong>Choose Storage:</strong> your microSD card.</li>
+          <li>When asked about OS customization, choose <strong>Edit Settings</strong> and set the hostname,
+            username and password, and your Wi-Fi.</li>
+          <li>Write the card, put it in the Pi and power on. After a minute or two, open
+            <code>http://&lt;hostname&gt;.local</code> in a browser to reach Mainsail.</li>
+        </ol>
+        <div class="note warn">The prototype uses hostname <code>PnP</code> and user <code>pnp</code>, with
+        the repository cloned to <code>/home/pnp/OSHE-PnP</code>. Some scripts and macros
+        (<code>VISION_HOME</code>, <code>RUN_JOB</code>) use those paths. If you choose different names,
+        update the paths in <code>printer.cfg</code>, <code>pnp_hmi.cfg</code> and
+        <code>Software/pnpvision/scripts/</code>.</div>
+
+        <p>Then, on the Pi:</p>
+        <pre><code>cd ~
+        git clone https://github.com/OSHE-Github/OSHE-PnP.git</code></pre>
+
+        <h2 id="2-flash-klipper-onto-the-octopus-pro">2. Flash Klipper onto the Octopus Pro</h2>
+        <div class="note warn">Don't leave anything connected to the heater outputs (HE0/HE1) when
+        flashing for the first time: the board may switch all heaters and fans on at first power-up.</div>
+        <ol>
+          <li>SSH into the Pi (<code>ssh pnp@PnP.local</code>) and open the firmware menu:
+        <pre><code>cd ~/klipper
+        make clean
+        make menuconfig</code></pre></li>
+          <li>Turn on <em>Enable extra low-level configuration options</em>, then set the options for
+            <strong>your board's chip</strong> (it is printed on the board and in its product name):
+            <div class="table-wrap"><table>
+              <thead><tr><th>Setting</th><th>Octopus Pro <strong>H723</strong> (this machine)</th><th>Octopus Pro <strong>F446</strong></th></tr></thead>
+              <tbody>
+                <tr><td>Micro-controller architecture</td><td>STMicroelectronics STM32</td><td>STMicroelectronics STM32</td></tr>
+                <tr><td>Processor model</td><td>STM32H723</td><td>STM32F446</td></tr>
+                <tr><td>Bootloader offset</td><td>128KiB bootloader</td><td>32KiB bootloader</td></tr>
+                <tr><td>Clock reference</td><td>25 MHz crystal</td><td>12 MHz crystal</td></tr>
+                <tr><td>Communication interface</td><td>USB (on PA11/PA12)</td><td>USB (on PA11/PA12)</td></tr>
+              </tbody>
+            </table></div>
+          </li>
+          <li>Press <kbd>Q</kbd>, save, and build: <code>make</code></li>
+          <li>Rename the result and copy it to a FAT32 microSD card:
+        <pre><code>mv out/klipper.bin out/firmware.bin</code></pre></li>
+          <li>Power off the Octopus, insert the card, and power on. It flashes itself in a few seconds.</li>
+          <li>Check it worked: <code>ls /dev/serial/by-id/</code> should list a <code>usb-Klipper_stm32…</code> device.
+            Copy that path into <code>[mcu] serial:</code> in <code>printer.cfg</code>.</li>
+        </ol>
+        <div class="note verify">⚠ Verify: the H723 settings match BIGTREETECH's published Klipper settings
+        for that board. Check against the
+        <a href="https://github.com/bigtreetech/BIGTREETECH-OCTOPUS-Pro">BTT Octopus Pro docs</a> before flashing.
+        For DFU flashing and updates, see the Voron Octopus Klipper guide.</div>
+
+        <h2 id="3-flash-klipper-onto-the-uno-second-mcu">3. Flash Klipper onto the Uno (second MCU)</h2>
+        <p>The Uno R3 adds extra outputs (currently the up-camera ring light). It uses a separate build
+        configuration so it doesn't overwrite the Octopus settings:</p>
+        <pre><code>cd ~/klipper
+        make menuconfig KCONFIG_CONFIG=config.uno    # Atmega AVR, atmega328p; turn off optional features so it fits
+        make KCONFIG_CONFIG=config.uno
+        make flash KCONFIG_CONFIG=config.uno FLASH_DEVICE=/dev/serial/by-id/usb-Arduino...</code></pre>
+        <p>Put the Uno's serial path into <code>[mcu uno] serial:</code> in <code>printer.cfg</code>
+        (it uses <code>restart_method: arduino</code>).</p>
+
+        <h2 id="4-install-extensions">4. Install extensions</h2>
+        <ul>
+          <li><strong>klipper-led_effect</strong> (<a href="https://github.com/julianschill/klipper-led_effect">github.com/julianschill/klipper-led_effect</a>): needed for the LED macros.</li>
+          <li><strong>G-Code Shell Command</strong>: install with <a href="https://github.com/dw-0/kiauh">KIAUH</a>
+            (main menu → Extensions → G-Code Shell Command; decline the example config). Needed for
+            <code>VISION_HOME</code> and <code>RUN_JOB</code>.</li>
+          <li><strong>crowsnest</strong> and <strong>KlipperScreen</strong>: usually included with MainsailOS.</li>
+          <li><strong>Obico</strong> (optional, remote monitoring). If you don't use it, remove
+            <code>[include moonraker_obico_macros.cfg]</code> from <code>printer.cfg</code>.</li>
+        </ul>
+
+        <h2 id="5-install-printer-cfg">5. Install printer.cfg</h2>
+        <p>Copy <code>Software/Klipper/printer.cfg</code> and <code>pnp_hmi.cfg</code> into
+        <code>~/printer_data/config/</code>. Then update:</p>
+        <ul>
+          <li><code>[mcu]</code> and <code>[mcu uno]</code> serial paths.</li>
+          <li>Pins, if your wiring differs from the <a href="electronics.html#pin-map">pin map</a>.</li>
+          <li>Travel limits, if your frame is a different size.</li>
+        </ul>
+        <p>Edit it in Mainsail under <strong>Machine</strong> → <code>printer.cfg</code> → <strong>Save &amp; Restart</strong>.
+        Reference copies of the other files on the prototype Pi (<code>moonraker.conf</code>,
+        <code>crowsnest.conf</code>, <code>KlipperScreen.conf</code> and more) are in
+        <code>Software/Klipper/from-pi/</code>.</p>
+
+        <p>Before the first move:</p>
+        <ul>
+          <li>Check every motor is in the slot the config expects.</li>
+          <li>Jog each axis a small distance at low speed and check the direction.</li>
+          <li>Test homing at low speed, one axis at a time (<code>G28 Z</code>, then <code>G28 Y</code>, then <code>G28 X</code>).</li>
+        </ul>
+
+        <p>To save changes made on the Pi back into the repo (run on your PC):</p>
+        <pre><code>scp pnp@PnP.local:~/printer_data/config/printer.cfg path/to/OSHE-PnP/Software/Klipper/printer.cfg</code></pre>
+
+        <h2 id="6-set-up-the-cameras-and-vision">6. Set up the cameras and vision</h2>
+        <p>Configure crowsnest (<a href="moonraker.html#cameras">Moonraker → Cameras</a>), then install
+        pnpvision and calibrate (<a href="vision.html">Vision</a>).</p>
+
+        <h2 id="troubleshooting">Troubleshooting</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Problem</th><th>What to check</th></tr></thead>
+          <tbody>
+            <tr><td>TMC driver registers all read zero</td><td>The board needs 24 V, not just USB power: Klipper reports a communication failure when the drivers are unpowered. Then check SPI jumpers, CS pins, and the MISO line.</td></tr>
+            <tr><td>Motor doesn't move or moves wrongly</td><td>Driver slot vs. config, cable wiring order (see <a href="electronics.html#stepper-cables">stepper cables</a>), CS pin.</td></tr>
+            <tr><td>Homing stops early in mid-air</td><td>Stall detection too sensitive: raise homing current toward 1.0 A or raise <code>driver_SGT</code> by 1. On the prototype, 20 mm/s or 0.8 A false-triggered; 40 mm/s at 1.0 A works.</td></tr>
+            <tr><td>Homing crashes into the frame</td><td>Wrong motor direction or stall detection not sensitive enough. Test slowly.</td></tr>
+            <tr><td>Jerky motion or skipped steps</td><td>Lower velocity/acceleration, check belt tension, check nothing binds.</td></tr>
+            <tr><td>Nothing powers on</td><td>Is the e-stop pressed? Check supply output and crimps.</td></tr>
+            <tr><td>Pi freezes during installs</td><td>Out of memory (1 GB). Use SSH + <code>tmux</code>, stop KlipperScreen temporarily, install OpenCV with <code>--only-binary=:all:</code>.</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="legacy-marlin">Legacy: Marlin</h2>
+        <p>V1 used modified Marlin firmware on the Ender 3's own board. It's kept in
+        <code>Software/Legacy-Marlin</code> but isn't used any more. See <a href="history.html">History</a>.</p>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

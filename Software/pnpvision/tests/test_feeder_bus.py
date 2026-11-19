@@ -1,0 +1,198 @@
+"""KlipperFeederBus: a feed is FEEDER_TOGGLE SLOT=n through Moonraker; Klipper errors become FeederError."""
+import os
+import sys
+
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from pnpvision.feeders import FeederError, KlipperFeederBus
+
+
+class FakeMR:
+    def __init__(self, fail=False):
+        self.sent, self.fail = [], fail
+
+    def gcode(self, script):
+        if self.fail:
+            raise RuntimeError("400 Bad Request: FEEDER_TOGGLE: SLOT must be 1, 2 or 3")
+        self.sent.append(script)
+
+
+def test_feed_sends_feeder_toggle_with_slot():
+    mr = FakeMR()
+    bus = KlipperFeederBus(mr)
+    bus.feed(3)
+    bus.wait(3)
+    assert mr.sent == ["FEEDER_TOGGLE SLOT=3"]
+
+
+def test_klipper_error_is_a_feeder_error():
+    with pytest.raises(FeederError, match="slot 7"):
+        KlipperFeederBus(FakeMR(fail=True)).feed(7)
+
+
+def test_cli_defaults_to_the_klipper_bus(monkeypatch):
+    from pnpvision import cli
+    monkeypatch.setattr(cli, "make_mr", lambda cfg: FakeMR())
+    assert isinstance(cli._feeder_bus({"feeders": {}}), KlipperFeederBus)
+    assert isinstance(cli._feeder_bus({"feeders": {"bus": "klipper"}}), KlipperFeederBus)
+
+
+def test_bare_tip_blob_counts_as_empty():
+    from pnpvision.runner import looks_empty
+    tip = {"ok": False, "offset_mm": [0.0, 0.0], "size_mm": [0.87, 0.79], "reason": "size 0.87x0.79 mm vs expected"}
+    assert looks_empty(tip, (1.6, 0.8)) and looks_empty(tip, (2.0, 1.25))
+    assert looks_empty({"ok": False, "reason": "no part found"}, (1.6, 0.8))
+    assert not looks_empty({"ok": True, "offset_mm": [0, 0], "size_mm": [1.6, 0.8]}, (1.6, 0.8))
+    tilted = {"ok": False, "offset_mm": [0, 0], "size_mm": [1.9, 0.8]}       # a real part, wrong size
+    assert not looks_empty(tilted, (1.6, 0.8))
+
+
+def test_feeder_cycle_picks_feeds_and_drops(tmp_path, monkeypatch):
+    import json
+    from types import SimpleNamespace
+    from pnpvision import cli
+    from pnpvision import machine_state as MS
+
+    class Machine:
+        safe_travel_z, feedrate = 26.0, 3000
+
+        def __init__(self):
+            self.pos, self.log = [0.0, 0.0, 5.0], []
+
+        def position(self):
+            return tuple(self.pos)
+
+        def move_abs(self, x=None, y=None, z=None, feedrate=None, stay_low=False):
+            for i, v in enumerate((x, y, z)):
+                if v is not None:
+                    self.pos[i] = v
+            self.log.append(("move", x, y, z))
+
+        def gcode(self, script):
+            self.log.append(("gcode", script))
+
+        def wait(self):
+            self.log.append(("gcode", "M400"))
+
+        def set_stream(self, on):
+            self.stream = on
+
+    m = Machine()
+    feeders = tmp_path / "feeders.json"
+    feeders.write_text(json.dumps({"feeders": [{"id": "F1", "kind": "servo", "servo": 1, "xy": [34.7, 26.7],
+                                                "part_top_z": 32.7, "teach_tip": "N08", "package": "R_0603_1608Metric"}]}))
+    monkeypatch.setattr(cli, "make_mr", lambda cfg: m)
+    monkeypatch.setattr(cli, "_feeders_path", lambda cfg: str(feeders))
+    monkeypatch.setattr(cli, "_feeder_bus", lambda cfg: KlipperFeederBus(m))
+    monkeypatch.setattr(cli, "reject_bin_xy", lambda cfg, ms: ([60.0, 130.0], "taught"))
+    monkeypatch.setattr(cli.C, "rel", lambda cfg, path: path)
+    monkeypatch.setattr(MS, "load", lambda path: {"current_tip": "N08", "tips": {"N08": {"board_touch_z": 39.5}}})
+    cli.cmd_feeder_cycle({"run": {}}, SimpleNamespace(feeder="F1", n=2, tip=None, yes=True))
+    g = [e[1] for e in m.log if e[0] == "gcode"]
+    assert g.count("FEEDER_TOGGLE SLOT=1") == 2
+    assert sum(s.startswith("VALVE_ON") for s in g) == 2 and sum(s.startswith("VALVE_OFF") for s in g) >= 2
+    assert ("move", None, None, 33.1) in m.log                # part top 32.7 + 0.4 pick press
+    assert ("move", 60.0, 130.0, None) in m.log
+
+
+def test_streaming_moves_skip_m400_and_position_queries(monkeypatch):
+    from pnpvision import moonraker as M
+    sent, queries = [], []
+
+    class R:
+        def __init__(self, data=None):
+            self.data = data or {"result": {}}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self.data
+
+    def post(url, json=None, timeout=None):
+        sent.append(json["script"])
+        return R()
+
+    def get(url, timeout=None, params=None):
+        queries.append(url)
+        return R({"result": {"status": {"toolhead": {"position": [10.0, 100.0, 26.0, 0.0], "homed_axes": "xyz"}}}})
+
+    monkeypatch.setattr(M.requests, "post", post)
+    monkeypatch.setattr(M.requests, "get", get)
+    mr = M.Moonraker(z_range=(0, 51), safe_travel_z=26.0)
+    mr.set_stream(True)
+    mr.move_abs(x=50.0, y=120.0)
+    first = len(queries)
+    mr.move_abs(z=38.0)
+    mr.move_abs(z=26.0)
+    assert len(queries) == first                  # after the first move: the cache, no queries
+    assert not any("M400" in s for s in sent)
+    assert mr.position() == (50.0, 120.0, 26.0)
+    mr.gcode("G28 X Y")                           # someone else moved it: query again
+    mr.position()
+    assert len(queries) == first + 1
+    mr.wait()
+    assert sent[-1] == "M400"
+    mr.set_stream(False)
+    mr.move_abs(z=30.0)
+    assert sent[-1].endswith("M400")
+
+
+def test_odd_blob_is_not_empty_but_rings_are():
+    from pnpvision.runner import looks_empty
+    odd = {"ok": False, "reason": "no part found (best blob fill 0.71 is not a rectangle)", "fill": 0.71}
+    rings = {"ok": False, "reason": "no part found (best blob fill 0.40 is not a rectangle)", "fill": 0.40}
+    assert not looks_empty(odd, (1.6, 0.8))
+    assert looks_empty(rings, (1.6, 0.8))
+
+
+@pytest.mark.parametrize("short_mm,ok", [(0.59, False), (0.58, False), (0.87, True), (0.96, True)])
+def test_part_on_its_side_is_rejected(monkeypatch, short_mm, ok):
+    """2026-11-18 data: an 0603 on its side read 1.82 x 0.59 mm; flat ones 1.65-1.70 x 0.87-0.96."""
+    import numpy as np
+    from types import SimpleNamespace
+    from pnpvision import upcam
+    from pnpvision.detect import PartMeasure
+    mpp = 0.01
+    motion = SimpleNamespace(mm_per_px=mpp, offset_mm=lambda v: np.asarray(v) * mpp, direction_mm=lambda a: a)
+    lens = SimpleNamespace(newK=np.array([[1, 0, 100], [0, 1, 100], [0, 0, 1]], float))
+    long_px, short_px = 1.70 / mpp, short_mm / mpp
+    monkeypatch.setattr(upcam, "measure_part",
+                        lambda *a, **k: PartMeasure((100.0, 100.0), long_px, short_px, 0.0, 0.93 * long_px * short_px))
+    cam = upcam.UpCam(None, lens, None, motion)
+    res = cam.inspect((1.6, 0.8), 0.3, img=np.zeros((200, 200, 3), np.uint8), min_width_frac=0.9)
+    assert res["ok"] is ok
+    if not ok:
+        assert "on its side" in res["reason"]
+
+
+@pytest.mark.parametrize("flipped", [False, True])
+def test_upside_down_resistor_is_rejected(monkeypatch, flipped):
+    """White underside = right way up; black top inside a white outline = upside down (2026-11-18)."""
+    import cv2
+    import numpy as np
+    from types import SimpleNamespace
+    from pnpvision import upcam
+    from pnpvision.detect import PartMeasure
+    img = np.full((200, 200, 3), 110, np.uint8)                       # grey nozzle face
+    cv2.rectangle(img, (60, 80), (140, 120), (250, 250, 250), -1)     # 80 x 40 px chip, white
+    if flipped:
+        cv2.rectangle(img, (70, 86), (130, 114), (90, 90, 90), -1)    # black top showing
+    pm = PartMeasure((100.0, 100.0), 80.0, 40.0, 0.0, 3000.0)
+    monkeypatch.setattr(upcam, "measure_part", lambda *a, **k: pm)
+    mpp = 0.02
+    motion = SimpleNamespace(mm_per_px=mpp, offset_mm=lambda v: np.asarray(v) * mpp, direction_mm=lambda a: a)
+    lens = SimpleNamespace(newK=np.array([[1, 0, 100], [0, 1, 100], [0, 0, 1]], float))
+    cam = upcam.UpCam(None, lens, None, motion)
+    res = cam.inspect((1.6, 0.8), 0.3, img=img, flip_check=True)
+    assert res["ok"] is (not flipped)
+    if flipped:
+        assert "upside down" in res["reason"]
+    assert cam.inspect((1.6, 0.8), 0.3, img=img)["ok"]               # capacitors: no flip check
+
+
+def test_flip_check_only_for_resistors():
+    from pnpvision.parts import package_info
+    assert package_info("R_0603_1608Metric")["flip_check"]
+    assert not package_info("C_0603_1608Metric")["flip_check"]

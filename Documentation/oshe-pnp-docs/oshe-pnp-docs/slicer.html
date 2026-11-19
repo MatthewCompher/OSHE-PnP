@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>pnpslice: KiCad to Job File | OSHE Pick and Place</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <header class="site-header">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-icon" aria-hidden="true"></span>Menu
+    </button>
+    <a class="site-title" href="index.html">OSHE <span>Pick and Place</span></a>
+    <span class="site-tagline">Open-source PCB assembly from an Ender 3</span>
+  </header>
+
+  <div class="layout">
+    <nav id="site-nav" class="site-nav" aria-label="Site">
+      <p class="nav-group">The machine</p>
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="hardware.html">Hardware</a></li>
+        <li><a href="build.html">Build Guide</a></li>
+        <li><a href="electronics.html">Electronics</a></li>
+      </ul>
+      <p class="nav-group">Software</p>
+      <ul>
+        <li><a href="software.html">Software Setup</a></li>
+        <li><a href="macros.html">G-code Macros</a></li>
+        <li><a href="moonraker.html">Moonraker</a></li>
+        <li><a href="slicer.html" aria-current="page">Slicer</a></li>
+        <li><a href="vision.html">Vision</a></li>
+      </ul>
+      <p class="nav-group">Project</p>
+      <ul>
+        <li><a href="history.html">History</a></li>
+        <li><a href="about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="content-col">
+      <main id="content">
+        <h1>pnpslice: KiCad to Job File</h1>
+
+        <p><strong>pnpslice</strong> is a "slicer" for the pick-and-place, like a 3D-printer slicer. Open a
+        KiCad board, check it, slice each side, step through the result, and export a
+        <strong>job file</strong> for the machine. It runs on your own computer (Windows, macOS or Linux).
+        The code is in <code>Software/Slicer</code>, with a full <code>User_Guide.md</code>.</p>
+
+        <figure class="img-slot" data-src="images/slicer-window.png" data-alt="Screenshot of the pnpslice window with a board loaded in Prepare mode">
+              <div class="img-placeholder">Image placeholder: Screenshot of the pnpslice window with a board loaded in Prepare mode<br><code>images/slicer-window.png</code></div>
+            </figure>
+
+        <h2 id="what-it-does-and-doesn-t-do">What it does, and doesn't do</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>pnpslice does (board side)</th><th>The machine does (pnpvision)</th></tr></thead>
+          <tbody>
+            <tr><td>Reads the <code>.kicad_pcb</code> (KiCad 6 or newer): parts, pads, outline</td><td>Homes with vision</td></tr>
+            <tr><td>Converts KiCad coordinates to the board frame</td><td>Finds the board on the plate</td></tr>
+            <tr><td>Works out each part's pick point, rotation and height</td><td>Converts board coordinates to machine coordinates</td></tr>
+            <tr><td>Checks for problems</td><td>Chooses feeders, Z heights and nozzle tips</td></tr>
+            <tr><td>Orders the placements</td><td>Checks each part on the nozzle and corrects it</td></tr>
+            <tr><td>Chooses 2–4 alignment pads</td><td>Retries missed picks, uses the reject bin, logs everything</td></tr>
+          </tbody>
+        </table></div>
+        <p>The job file never contains machine coordinates, Z heights, feeder positions or G-code,
+        because those depend on where the board lands and on the machine's calibration.
+        <strong>Only SMD parts are placed.</strong> Through-hole parts and parts excluded from position
+        files are skipped; Do-not-populate parts stay in the file, marked to skip.</p>
+
+        <h2 id="install">Install</h2>
+        <p>You need Python 3.10 or newer (3.12 or 3.13 recommended).</p>
+
+        <h3 id="quick-start-vs-code">Quick start (VS Code)</h3>
+        <ol>
+          <li>Open the <code>Software/Slicer</code> folder in VS Code.</li>
+          <li>Open <code>run.py</code> and click <strong>Run</strong>.</li>
+          <li>The first time, it offers to install PySide6 (the Qt toolkit, about 100 MB). Press Enter.</li>
+        </ol>
+        <p>To always open your own board, set <code>BOARD = r"C:\path\to\board.kicad_pcb"</code> at the top
+        of <code>run.py</code>. Set <code>MODE = "text"</code> for a terminal summary instead of the window.</p>
+
+        <h3 id="full-install-with-tests">Full install (with tests)</h3>
+        <pre><code># Windows (PowerShell)
+        cd path\to\Slicer
+        py -m venv .venv
+        .venv\Scripts\Activate.ps1
+
+        # macOS / Linux
+        cd path/to/Slicer
+        python3 -m venv .venv
+        source .venv/bin/activate
+
+        # then
+        python -m pip install --upgrade pip
+        pip install -e ".[gui,dev]"
+        pytest</code></pre>
+        <p>If PowerShell refuses to run the activate script, run
+        <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> once.</p>
+
+        <h2 id="prepare-your-board-in-kicad">Prepare your board in KiCad</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Check</th><th>Why</th><th>Where in KiCad</th></tr></thead>
+          <tbody>
+            <tr><td>Every part has its own reference (<code>R1</code>, <code>R2</code>, not <code>R?</code>)</td><td>The runner logs, retries and resumes by reference</td><td>Schematic: Tools › Annotate Schematic, then Update PCB</td></tr>
+            <tr><td>SMD parts have the SMD attribute</td><td>Only SMD parts are placed</td><td>Footprint properties › Fabrication attributes</td></tr>
+            <tr><td>Parts you won't fit are marked Do not populate</td><td>Kept in the job, but skipped</td><td>Footprint or symbol properties</td></tr>
+            <tr><td>Board outline is closed, on Edge.Cuts</td><td>Sets the origin; checks parts are on the board</td><td>Run DRC</td></tr>
+            <tr><td>2–3 fiducials, if you can</td><td>The best alignment targets</td><td>Library <code>Fiducial</code>, near opposite corners</td></tr>
+            <tr><td>Optional: a <code>Height</code> field on footprints</td><td>Overrides the typical height for that package</td><td>Footprint properties › add field</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="using-the-window">Using the window</h2>
+        <ul>
+          <li><strong>Prepare</strong> and <strong>Preview</strong> (top bar) switch between setting up and checking the result.</li>
+          <li><strong>Plate 1 · Top</strong> / <strong>Plate 2 · Bottom</strong> switch sides. The bottom is shown mirrored, as seen from below.</li>
+          <li>Mouse wheel zooms; drag empty space to pan; <kbd>F</kbd> or double-click fits the board.</li>
+          <li>Click a part, or its row in the parts table, to select it.</li>
+          <li><kbd>Ctrl</kbd>+<kbd>O</kbd> opens a board (or drag a <code>.kicad_pcb</code> onto the window). <kbd>F5</kbd> reloads after you save in KiCad.</li>
+        </ul>
+
+        <h3 id="what-the-marks-mean">What the marks mean</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Mark</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Gold shapes</td><td>Copper pads</td></tr>
+            <tr><td>Orange pad</td><td>Pin 1</td></tr>
+            <tr><td>Small white +</td><td>Pick point: center of the part's pads</td></tr>
+            <tr><td>Magenta ring with A, B, C</td><td>Alignment pad</td></tr>
+            <tr><td>Red / green arrows</td><td>Board-frame origin and axes</td></tr>
+            <tr><td>Teal part (Preview)</td><td>The part placed at this step; thin teal line is the nozzle path</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="part-heights">Part heights</h2>
+        <p>The runner needs each part's height to know how far down to place it. pnpslice takes the
+        first of: (1) a height you entered with <strong>Edit heights…</strong>, (2) a <code>Height</code>
+        field on the KiCad footprint, (3) a built-in typical height for common packages. If none
+        exists, slicing is blocked. Typical heights are only a starting point: check capacitors
+        especially, since they get taller at higher values. Your heights are saved per board in
+        <code>&lt;board&gt;.pnpslice.json</code>.</p>
+
+        <h2 id="alignment-pads">Alignment pads</h2>
+        <p>Before placing, the machine centers its down camera on each alignment pad to find exactly
+        where the board is and how it's rotated. Good pads are:</p>
+        <ul>
+          <li><strong>Visible</strong>: copper with a solder-mask opening on the placed side.</li>
+          <li><strong>Distinct</strong>: no similar pad within 3 mm (the "look-alike clearance").</li>
+          <li><strong>Spread out</strong>, near opposite corners, not in a line. Three is recommended.</li>
+          <li><strong>Never covered</strong>, ideally: fiducials first, then pads of parts that aren't placed.</li>
+        </ul>
+        <p>pnpslice picks them automatically. To choose yourself, click <strong>Pick by hand</strong>:
+        distinct pads turn green, look-alikes red. Click to add or remove; <strong>Auto</strong> goes back.
+        Pad A is the one nearest the origin.</p>
+        <figure class="img-slot" data-src="images/slicer-alignment-pick.png" data-alt="Pick-by-hand mode with green and red candidate pads">
+              <div class="img-placeholder">Image placeholder: Pick-by-hand mode with green and red candidate pads<br><code>images/slicer-alignment-pick.png</code></div>
+            </figure>
+
+        <h2 id="slice-preview-export">Slice, preview, export</h2>
+        <ol>
+          <li><strong>Slice plate</strong> (<kbd>Ctrl</kbd>+<kbd>R</kbd>). If anything blocks it, the
+            <strong>Problems</strong> list says what and how to fix it.</li>
+          <li><strong>Preview</strong>: drag the slider or use <kbd>↑</kbd> <kbd>↓</kbd> to step through the order.</li>
+          <li><strong>Export job…</strong> (<kbd>Ctrl</kbd>+<kbd>E</kbd>) saves <code>&lt;board&gt;-top.job.json</code>
+            or <code>&lt;board&gt;-bottom.job.json</code>.</li>
+          <li>Copy the job file to the Pi, into <code>Software/pnpvision/jobs/</code>.</li>
+        </ol>
+        <figure class="img-slot" data-src="images/slicer-preview.png" data-alt="Preview mode showing placement order and nozzle path">
+              <div class="img-placeholder">Image placeholder: Preview mode showing placement order and nozzle path<br><code>images/slicer-preview.png</code></div>
+            </figure>
+
+        <h3 id="placement-order">Placement order</h3>
+        <p>Lowest parts first, then smaller packages, one package at a time, with the shortest path
+        within each group. That way the nozzle never meets a taller part that's already placed.</p>
+
+        <h3 id="blocking-errors">Blocking errors</h3>
+        <ul>
+          <li>Duplicate or unnumbered references (unless <em>Auto-number duplicate references</em> is on)</li>
+          <li>A pick point outside the board outline</li>
+          <li>A package with no height</li>
+          <li>No parts on that side</li>
+        </ul>
+
+        <h2 id="command-line">Command line</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>pnpslice info BOARD [--json]</code></td><td>Outline, parts on each side, and problems</td></tr>
+            <tr><td><code>pnpslice slice BOARD [--side top|bottom|both] [-o DIR] [--auto-number]</code></td><td>Writes the job file(s)</td></tr>
+            <tr><td><code>pnpslice check-gerbers BOARD GERBER_DIR</code></td><td>Checks every computed pad center lands on a pad in KiCad's copper Gerbers</td></tr>
+          </tbody>
+        </table></div>
+
+        <h2 id="the-job-file-format">The job file format</h2>
+        <p>Job files follow <code>oshe-pnp-job/1</code>, defined in
+        <code>Software/pnpvision/JOB_FORMAT.md</code>. It's the contract between the slicer and the
+        machine: any program that writes this format can feed the machine.</p>
+
+        <h3 id="the-board-frame">The board frame</h3>
+        <ul>
+          <li>Seen from above the side being placed.</li>
+          <li>Origin at the lower-left corner of the outline's bounding box; +X right, +Y up. All lengths in mm.</li>
+          <li>Bottom-side jobs are mirrored so they read as if the bottom were the top.</li>
+          <li>Angles in degrees, counter-clockwise positive, from the footprint's library orientation.</li>
+        </ul>
+
+        <h3 id="fields">Fields</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Field</th><th>Contents</th></tr></thead>
+          <tbody>
+            <tr><td><code>format</code></td><td>Always <code>"oshe-pnp-job/1"</code></td></tr>
+            <tr><td><code>board</code></td><td><code>name</code>, <code>side</code> (top/bottom), <code>outline_mm</code>, <code>thickness_mm</code></td></tr>
+            <tr><td><code>alignment</code></td><td>2–4 pads: <code>name</code>, <code>x</code>, <code>y</code>, <code>shape</code>, size, optional <code>ref</code>/<code>pad</code></td></tr>
+            <tr><td><code>placements</code></td><td>In order: <code>ref</code>, <code>value</code>, <code>package</code>, <code>x</code>, <code>y</code>, <code>rot</code>, <code>height_mm</code>, optional <code>feeder</code>, <code>nozzle</code>, <code>skip</code></td></tr>
+            <tr><td><code>source</code></td><td>Optional: generator, input files, date</td></tr>
+          </tbody>
+        </table></div>
+
+        <h3 id="example">Example</h3>
+        <pre><code>{
+          "format": "oshe-pnp-job/1",
+          "board": {
+            "name": "Test PCB",
+            "side": "top",
+            "outline_mm": [[0, 0], [45.0, 0], [45.0, 45.0], [0, 45.0]],
+            "thickness_mm": 1.6
+          },
+          "alignment": [
+            {"name": "A", "x": 2.50, "y": 3.10, "shape": "rect", "w": 1.0, "h": 1.3, "rot": 0, "ref": "J1", "pad": "1"},
+            {"name": "B", "x": 41.80, "y": 40.20, "shape": "circle", "d": 1.2},
+            {"name": "C", "x": 40.90, "y": 4.00, "shape": "rect", "w": 0.6, "h": 0.9, "rot": 90}
+          ],
+          "placements": [
+            {"ref": "R1", "value": "10k", "package": "R_0603_1608Metric",
+             "x": 12.535, "y": 20.000, "rot": 90.0, "height_mm": 0.45},
+            {"ref": "U1", "value": "NE555", "package": "SOIC-8_3.9x4.9mm_P1.27mm",
+             "x": 30.000, "y": 15.500, "rot": -90.0, "height_mm": 1.75}
+          ]
+        }</code></pre>
+      </main>
+
+      <footer class="site-footer">
+        <p>OSHE Pick and Place is developed by students in the Open Source Hardware Enterprise at
+        Michigan Technological University. Released under the
+        <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3</a>.</p>
+        <p><a href="https://github.com/OSHE-Github/OSHE-PnP">GitHub</a> ·
+        <a href="https://oshe.io/">oshe.io</a></p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

@@ -2,7 +2,9 @@
 
 <div align="center">
 
-![Complete Assembly V2](https://github.com/josephp-eng/OSHE-PnP/blob/main/Media/CompleteAssembly.PNG?raw=true)
+![V3 placing 0603 resistors](../Documentation/docs/assets/media/job-realtime.gif)
+
+*V3 at work. (A V3 render will replace this once `PnP_Full_Assembly_V3.step` is added.)*
 
 </div>
 
@@ -22,7 +24,7 @@ With every version of the machine, certain hardware features are not required fo
 
 ## Folder Structure
 * **/V1-Legacy**: Baseline Ender 3 conversion (Fall 2025).
-* **/V2-Legacy**: Current Klipper-integrated development (Spring 2026).
+* **/V2-Legacy**: Klipper-integrated version with roller axes and a printed toolhead (Spring 2026).
 * **/V3-Active**: The most up to date, Klipper based PnP, now with a CoreXY system and improved toolhead with vision validation system . The final iteration of the Michigan Tech student led project (Fall 2026). Note that V3 also features an air compressor compared to V2's diaphragm pump.
 * `Ender-3-Full-Assembly.step`: Included as a reference model for Ender 3 3D printer, which we used to design around for aluminum extrusion and electrical hardware.
 
@@ -31,13 +33,25 @@ With every version of the machine, certain hardware features are not required fo
 * All components exported to `.step` and/or `.stl` and are viewable in any CAD software.
 
 ## V3 Directory
-* **/Electrical**: Staging plate mounting for electrical hardware, HMI enclosure, up facing camera mount
-    * Utilizes acrylic and PLA support to attach to the underside of the staging plate
-* **/Feeder**: Tape and reel feeding system, including our tape holder solution as well as modified 0816 low-profile feeder
-* **/Framing**: The PnP structure and CoreXY motion system support
-* **/Staging**: Structure for 3D printed staging plate and brackets
-* **/Toolhead**: LumenPnP inspired CP40 toolhead with vision support
-* `PnP_Full_Assembly_V3.step`: **Master File** 
+Parts named **A** and **B** are mirror images: print one of each. Print settings and the full
+parts list are in the docs: [Print the Parts](../Documentation/docs/build/printing.md).
+
+* **/Framing**: legs (`Frame Leg Bottom A/B`, `Middle`, `Spacer`), 4040 spacers (one with the logo), and the CoreXY corners
+    * `TOP motor A` / `TOP motor B`: the two **back** corners with the motors (frame, upper and lower motor mounts)
+    * `TOP idler A` / `TOP idler B`: the two **front** corners (upper and lower idlers, tensioner and its mount)
+* **/X-Axis**: X carriage (`UpperA/B`, `LowerA/B`) and `RailSpacer`
+* **/Staging**: the plate and everything on it
+    * `/Plate/Four Quarters` (tiles LL, LR, UL, UR) **or** `/Plate/Two Halves` (for a large printer; the "Camera" half has the up-camera opening), `/Plate/Acrylic` (panel + DXF for laser cutting), `/Plate/OPTIONAL Spacers`
+    * `/Brackets`: plate brackets
+    * `/Mounts`: `PCB Mount Static` + `PCB Mount Dynamic`, the camera datum (`CameraDatum.3mf` multi-colour, or the `CameraDatum NO AMS` parts), and `/Up Camera Mount` (camera mount, LED light plate, diffuser)
+* **/Feeder**: `/Tape Alignment` (tape guide ends and rib for the 0816-style feeder), `/Manual Feeder` (hand-loaded track)
+* **/Electrical**: `/HMI` touchscreen frame, arm and end mount
+
+> [!WARNING]
+> **Still being added (Ongoing):** `/Toolhead` (the LumenPnP-based CP40 head as built),
+> `/Feeder/0816 Feeder` (the modified servo feeder body), `/Electrical/Electrical Mounts` (the
+> brackets for the electronics), and `PnP_Full_Assembly_V3.step` (**master file**). Native CAD
+> files (Fusion 360 / SolidWorks / Onshape) are also to come.
 
 ### V2 Directory (outdated)
 * **/AxisSupport**: Supporting pieces for rolling the Y-axis along the X-axis
@@ -77,7 +91,8 @@ We utilize and build upon the work of the open-source community:
     * [Push-Pull Feeder Repository](https://github.com/markmaker/PushPullFeeder)
     * Our implementation includes optimization for use with 4040 v-slotted aluminum extrusion (commonly found on Ender 3), found in `/V2-Legacy/PushPullFeeder`.
     * We found our modified feeder is pretty unreliable, and in our testing, we struggled to have it operate consistently with our current modifications to work with 40-wide extrusion.
-* **0816 SMT Automatic Feeder Design:** Designed by **Mark Maker**.
+* **0816 SMT Automatic Feeder:** the original design is by **mgrl** ([mgrl.de](https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder)).
+    * We started from a community **low-profile worm-gear** remix of it on MakerWorld (link below) and modified that further to fit the standard fasteners we had on hand (`/V3-Active/Feeder`).
     * [Original 0816 Website](https://docs.mgrl.de/maschine:pickandplace:feeder:0816feeder)
     * [0816 Low-Profile Worm Gear Feeder (pick and place)](https://makerworld.com/en/models/778189-0816-low-profile-worm-gear-feeder-pick-and-place#profileId-714997)
     * Our implementation references the original 0816 feeder with the low profile enhancements, modified to fit standard fastener hardware we had on hand `/V3-Active/Feeder`. Please follow their guides and documentation for additional information.
@@ -87,5 +102,5 @@ We utilize and build upon the work of the open-source community:
 *Our Pick and Place structures can be printed in either PETG or PLA, but PETG is preferred*
 * **Minimal Settings:** 0.2mm layer height, 2+ perimeters, 12% Gyroid infill, tree supports recommended
 *The Push Pull Feeder is recommended by Mark Maker to be printed with more specific settings. See the attributed repository for more information.*
-* **Hardware:** Our compoennts were printed and verified across the **Bambu Lab A1**, **Prusa Core 1**, and **Voron 2.4** platforms with their respective slicers.
+* **Hardware:** Our components were printed and verified across the **Bambu Lab A1**, **Prusa Core 1**, and **Voron 2.4** platforms with their respective slicers.
     * Standard 0.4mm nozzle recommended

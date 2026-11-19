@@ -19,6 +19,9 @@ import time
 
 import cv2
 
+# Wait after switching a light ON before the frame that counts (camera auto-exposure).
+SWITCH_ON_SETTLE_S = 1.0
+
 
 class Light:
     is_on = False
@@ -76,6 +79,17 @@ class KlipperLed(Light):
         self.mr.gcode(" ".join(parts) + "\nM400")
 
 
+class KlipperMacro(Light):
+    """Light switched by printer.cfg macros, e.g. VISION_LIGHT_ON / VISION_LIGHT_OFF."""
+    def __init__(self, mr, on_macro, off_macro=None):
+        self.mr, self.on_macro, self.off_macro = mr, on_macro, off_macro
+
+    def _set(self, state):
+        macro = self.on_macro if state else self.off_macro
+        if macro:
+            self.mr.gcode(f"{macro}\nM400")
+
+
 class GpioLight(Light):
     """Light driven directly from a Pi GPIO (BCM number) through a MOSFET. Needs gpiozero."""
     def __init__(self, bcm_pin, level=1.0):
@@ -96,6 +110,8 @@ def make_light(section, mr=None):
         return KlipperPin(mr, section["name"], level)
     if kind == "klipper_led":
         return KlipperLed(mr, section["name"], level, section.get("white", False), section.get("index"))
+    if kind == "klipper_macro":
+        return KlipperMacro(mr, section["on_macro"], section.get("off_macro"))
     if kind == "gpio":
         return GpioLight(section["name"], level)
     raise ValueError(f"unknown lighting type {kind!r}")
@@ -111,9 +127,12 @@ def grab_lit(cam, light, lens=None, settle_s=0.2, subtract_ambient=False, keep_o
             if light.is_on:
                 light.off()
             dark = cam.fresh(settle_s=settle_s)
-        if not light.is_on:
+        switched = not light.is_on
+        if switched:
             light.on()
-        lit = cam.fresh(settle_s=settle_s)
+        # A light that was just switched on needs the camera's auto-exposure to catch up
+        # (0.2 s gave a blown-out frame); one that was already on only needs a fresh frame.
+        lit = cam.fresh(settle_s=max(settle_s, SWITCH_ON_SETTLE_S) if switched else settle_s)
     finally:
         if not keep_on:
             light.off()
