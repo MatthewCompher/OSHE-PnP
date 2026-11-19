@@ -1,38 +1,70 @@
-# 💻 Software & Firmware Configuration
+# 💻 Software
 
-## Overview
-The OSHE Pick-and-Place machine uses a modern 3D-printer software stack to manage high-precision motion control, vacuum actuation, and component indexing. 
+Everything that runs the OSHE Pick and Place (V3). Full setup and usage are in the
+documentation: [Software Setup](../Documentation/docs/software/index.md),
+[Calibration](../Documentation/docs/calibration/index.md),
+[Running Jobs](../Documentation/docs/operate/index.md).
 
-As of **Version 2.0 (Spring 2026)**, the project has transitioned to **Klipper Firmware** managed via the **Mainsail** web interface. This configuration allows for real-time macro editing and superior hardware communication compared to traditional monolithic firmware.
+## 🧱 What runs where
 
----
+```
+Your computer                        Raspberry Pi 4 (MainsailOS)                Controllers
+-------------                        ---------------------------                -----------
+KiCad -> pnpslice -> job file  ----> pnpvision (calibration, jobs, reports)
+         (SD/USB or network)          |  Moonraker API (port 7125)
+                                      |    -> Klipper host -------------------> Octopus Pro: steppers, valve, toolhead LEDs
+                                      |  KlipperScreen (touchscreen Job page)  \-> Arduino Uno: feeder servos, camera + frame lights
+                                      |  Mainsail (browser)
+                                      \- crowsnest (down + up camera)
+```
 
-## 🚀 The Klipper Stack (Recommended)
-This is the current standard for the MTU-OSHE Pick-and-Place. It splits processing between a host computer (Raspberry Pi/PC) and the MCU (Octopro Control Board).
+| Folder | What | README |
+|---|---|---|
+| [`Klipper/`](Klipper) | Klipper configuration, touchscreen menu and Job page, SD/USB mount rule | [Klipper/README.md](Klipper/README.md) |
+| [`pnpvision/`](pnpvision) | Python on the Pi: visual homing, camera calibration, board alignment, the job runner, board check, reports, SD/USB import | [pnpvision/README.md](pnpvision/README.md) |
+| [`Slicer/`](Slicer) | **pnpslice**: KiCad board -> `oshe-pnp-job/1` job file; Windows app or Python | [Slicer/README.md](Slicer/README.md) |
+| [`feeder_nano/`](feeder_nano) | **obsolete** Arduino Nano feeder firmware (replaced by Klipper servos on the Uno) | [feeder_nano/README.md](feeder_nano/README.md) |
+| [`Legacy-Marlin/`](Legacy-Marlin) | **obsolete** V1 Marlin firmware | - |
 
-### 1. Host Interface: MainsailOS
-* **Purpose:** Provides the web dashboard for machine operation.
-* **Access:** Once installed, the machine is controlled via a local IP address in any web browser.
+Lens calibration and the undistorted camera views come from
+[`Archive/USB Camera Calibration Vibecode Project`](../Archive/USB%20Camera%20Calibration%20Vibecode%20Project)
+(still used by V3).
 
-### 2. Control Logic: Custom Macros
-The software includes specialized G-Code macros designed specifically for SMT assembly rather than 3D printing. These are located in `printer.cfg` and `macros.cfg`.
-* **Spool Management:** Automated coordinate calculation for up to 5 component feeders.
-* **Safety Logic:** Pre-configured "Z-Safe" heights to ensure the toolhead clears feeders and PCB clamps during rapid XY moves.
-* **Vacuum Actuation:** Dedicated pin-mapping for the solenoid valve, allowing for `VACUUM_ON` and `VACUUM_OFF` commands.
+## ⚙️ Hardware and key facts
 
-### 3. Setup Instructions
-1. **Flash MCU:** Use the provided Klipper firmware bin for your specific board (e.g., Creality V4.2.2 or SKR Mini).
-2. **Configuration:** Upload the `printer.cfg` from this repository to your Mainsail config directory.
-3. **Calibration:** Perform the **Machine Setup** and **Vacuum Calibration** steps detailed in the [Master Documentation](https://docs.google.com/document/d/1zdPMhOE8R7Szz68Ky9EoDyxVyp7iftD7q8Uco1WKPY8/edit?usp=sharing).
+| | |
+|---|---|
+| Controller | BTT Octopus Pro (STM32H723), TMC5160 drivers; Arduino Uno R3 as second Klipper MCU |
+| Host | Raspberry Pi 4 (1 GB), MainsailOS, user `pnp`, repository at `~/OSHE-PnP` |
+| Kinematics | CoreXY; travel X 0 - 235, Y 0 - 343, Z 0 - 51 mm |
+| **Z direction** | **0 = top, larger Z = nozzle lower.** Plate at about Z 50, PCB top at Z 39.5 (N08 tip), travel at Z 26, Z 22 in front of Y 30 (feeders) |
+| Rotation | `[manual_stepper stepper_r]`, 1 unit = 1°, no endstop (`G28` sets 0) |
+| Homing | sensorless, then **Vision home** re-zeros X/Y on datum dot 0 with the down camera |
+| Cameras | down: Arducam 12MP (1920 x 1080, `/webcam/`); up: InnoMaker 720P (1280 x 720, `/webcam2/`, fixed exposure) |
 
----
+## 📋 Status (2026-11-18)
 
-## ⚠️ Legacy: Marlin Firmware (Deprecated)
-*Version 1.0 (Fall 2025) utilized Marlin. While instructions for this remain in the documentation for users with stock Ender 3 hardware, it is **not recommended** for V2.0 builds due to limitations in macro flexibility and real-time adjustment.*
+| Subsystem | State |
+|---|---|
+| Motion, homing, visual homing, nozzle rotation | ✅ working |
+| Lights (toolhead, up-camera ring, frame) | ✅ working |
+| Cameras, lens calibration, motion maps, nozzle offset | ✅ calibrated |
+| Board alignment from copper pads | ✅ working (before every job) |
+| Up-camera inspection: size, angle, on its side, upside down, empty | ✅ working, rejects go to the bin |
+| Vacuum (compressor, valve, venturi) | ✅ working |
+| Feeders | ✅ F1 working; F2 / F3 abandoned (hardware) |
+| Job runner, retries, reject bin, event log, reports | ✅ working: 97.9 % picks, ~511 parts/hour |
+| Touchscreen Job page, SD/USB job loading, emergency stop | ✅ working |
+| Slicer (KiCad -> job), Windows app, dry-run G-code | ✅ working |
 
 ## 🔍 Troubleshooting
-* **TMC Driver Communication:** If all registers read zero, verify the 24V power supply to the board; Klipper will report a "Communication Failure" if the drivers are unpowered.
-* **Vacuum Failure:** If the solenoid clicks but no suction occurs, check for air leaks in the 3D-printed toolhead manifold or verify the 24V-to-12V buck converter output.
 
----
-*Refer to the Technical Information section (Page 55+) of the [Master Documentation](https://docs.google.com/document/d/1zdPMhOE8R7Szz68Ky9EoDyxVyp7iftD7q8Uco1WKPY8/edit?usp=sharing) for deep-dive code logic and coordinate offsets.*
+See [Troubleshooting](../Documentation/docs/help/troubleshooting.md). The ones that come up most:
+
+* **"Unknown command PNP_..."**: the `.cfg` files on the Pi are copies; after `git pull`, copy the
+  changed ones into `~/printer_data/config/` and `FIRMWARE_RESTART` ([Klipper/README.md](Klipper/README.md)).
+* **TMC registers read zero**: the board has no 24 V (USB power alone isn't enough).
+* **Pi freezes during installs**: 1 GB of RAM. Use SSH + `tmux`, stop KlipperScreen, install with
+  `pip install --only-binary=:all:`.
+* **Camera "NO SIGNAL"**: `~/printer_data/logs/crowsnest.log`; "ustreamer not found" -> reinstall
+  crowsnest (`cd ~/crowsnest && sudo make install`, in `tmux`).

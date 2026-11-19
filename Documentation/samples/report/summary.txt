@@ -1,0 +1,55 @@
+Per run (pick success = picks that came up with a good part / all picks):
+  2026-11-11 12:54  run 3cf8a26d  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 1 EMPTY 0  photos not found
+  2026-11-11 13:04  run 76faeb54  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 0 EMPTY 1  photos not found
+  2026-11-11 13:26  run 9068e751  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 1 EMPTY 0  photos not found
+  2026-11-11 13:30  run 9636f6f0  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 1 EMPTY 0  photos not found
+  2026-11-11 13:35  run 8f4db062  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 1 EMPTY 0  photos not found
+  2026-11-11 14:03  run 27c13a8f  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 0 EMPTY 1  photos not found
+  2026-11-11 14:27  run 4ba28f7c  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 3 REJECT 1 EMPTY 0  photos not found
+  2026-11-11 15:08  run 2ed6f230  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 2 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_150747
+  2026-11-11 15:19  run 9a39b18f  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_151917
+  2026-11-11 15:27  run e65c6d63  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_152648
+  2026-11-11 15:34  run eee12cce  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 4 REJECT 0 EMPTY 2  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_153428
+  2026-11-11 16:52  run c1602920  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 5 EMPTY 2  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_165143
+  2026-11-11 17:08  run 376c319e  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 5 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_170813
+  2026-11-11 17:22  run 789c6031  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 5 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_172155
+  2026-11-11 17:35  run bba7f187  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 0 EMPTY 0  photos not found
+  2026-11-11 17:36  run 10717918  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 0 EMPTY 0  photos not found
+  2026-11-11 17:36  run 194f54fc  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 1 REJECT 0 EMPTY 0  photos not found
+  2026-11-11 17:52  run 4776ba6c  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 2 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_175234
+  2026-11-11 17:56  run fd1dce93  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 2 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_175604
+  2026-11-11 18:05  run ee34ccb1  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 11 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_180445
+  2026-11-11 18:54  run 345398ff  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 13 REJECT 2 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/place_test_20261111_185414
+  2026-11-14 19:38  run 2427ea10  run-job            picks 1/1 (100 %) [0805: 1/1]  placed 1  rejects 1  vision PASS 3 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261114_193819
+  2026-11-14 19:52  run 03dfa9bf  run-job            picks 0/3 (0 %) [0805: 0/3]  placed 0  rejects 0  vision PASS 0 REJECT 0 EMPTY 3  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261114_195221
+  2026-11-14 19:59  run 5c60359f  run-job            picks 2/2 (100 %) [0805: 2/2]  placed 2  48.4 s/part = 74 CPH  rejects 1  vision PASS 5 REJECT 0 EMPTY 3  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261114_195843
+  2026-11-17 18:59  run 61707bbe  run-job            picks 1/1 (100 %) [0603: 1/1]  placed 1  rejects 2  vision PASS 2 REJECT 0 EMPTY 2  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_185907
+  2026-11-17 19:32  run 2bb86644  run-job            picks 1/1 (100 %) [0603: 1/1]  placed 1  rejects 2  vision PASS 2 REJECT 0 EMPTY 2  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_193225
+  2026-11-17 21:00  run c8341d86  place-test/inspect picks 0/0 (-)  placed 0  rejects 0  vision PASS 0 REJECT 0 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_210035
+  2026-11-17 21:09  run 3293fdeb  run-job            picks 3/4 (75 %) [0603: 3/4]  placed 3  46.1 s/part = 78 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 4  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_210859
+  2026-11-17 21:15  run 42d65f41  run-job            picks 1/1 (100 %) [0603: 1/1]  placed 1  43.4 s/part = 83 CPH  rejects 0  vision PASS 2 REJECT 0 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_211438
+  2026-11-17 21:21  run 2e2aa3a3  run-job            picks 1/1 (100 %) [0603: 1/1]  placed 1  43.4 s/part = 83 CPH  rejects 0  vision PASS 2 REJECT 0 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_212044
+  2026-11-17 21:24  run 01222ad3  run-job            picks 2/2 (100 %) [0603: 2/2]  placed 2  rejects 0  vision PASS 4 REJECT 0 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_212354
+  2026-11-17 21:26  run f5162bc2  run-job            picks 3/3 (100 %) [0603: 3/3]  placed 3  31.4 s/part = 115 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 3  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_212550
+  2026-11-17 21:30  run 7cab7a94  run-job            picks 3/3 (100 %) [0603: 3/3]  placed 3  24.1 s/part = 150 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_213021
+  2026-11-17 21:41  run 2f73c7b7  run-job            picks 3/3 (100 %) [0603: 3/3]  placed 3  8.3 s/part = 432 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_214147
+  2026-11-17 21:49  run 7e429fc9  run-job            picks 3/3 (100 %) [0603: 3/3]  placed 3  7.8 s/part = 461 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_214924
+  2026-11-17 21:54  run ed2ce25a  run-job            picks 3/3 (100 %) [0603: 3/3]  placed 3  7.8 s/part = 461 CPH  rejects 0  vision PASS 6 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_215300
+  2026-11-17 21:58  run fa036095  run-job            picks 23/24 (96 %) [0603: 23/24]  placed 23  7.3 s/part = 491 CPH  rejects 0  vision PASS 46 REJECT 0 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261117_215810
+  2026-11-18 12:36  run 32d4dc66  run-job            picks 0/3 (0 %) [0603: 0/3]  placed 0  rejects 0  vision PASS 0 REJECT 0 EMPTY 3  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261118_123607
+  2026-11-18 12:37  run b3862c9f  run-job            picks 5/6 (83 %) [0603: 5/6]  placed 5  7.6 s/part = 471 CPH  rejects 0  vision PASS 10 REJECT 1 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261118_123649
+  2026-11-18 12:58  run b76c1d40  run-job            picks 23/23 (100 %) [0603: 23/23]  placed 23  6.9 s/part = 519 CPH  rejects 1  vision PASS 46 REJECT 1 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261118_125753
+  2026-11-18 13:01  run f7859dbd  check-board        PLACED 23  MISSING 23  photos board_check_20261118_130115
+  2026-11-18 13:11  run 677e8924  check-board        PLACED 23  MISSING 23  placement error 23 parts: mean 0.075 mm, worst 0.207 mm  photos board_check_20261118_131142
+  2026-11-18 13:27  run 6f30de08  run-job            picks 23/24 (96 %) [0603: 23/24]  placed 23  7.2 s/part = 499 CPH  rejects 1  vision PASS 49 REJECT 1 EMPTY 1  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261118_132720
+  2026-11-18 13:30  run 707db587  check-board        PLACED 23  MISSING 23  placement error 22 parts: mean 0.080 mm, worst 0.225 mm  photos board_check_20261118_133023
+  2026-11-18 13:39  run f0c9f5f1  run-job            picks 23/23 (100 %) [0603: 23/23]  placed 23  6.8 s/part = 527 CPH  rejects 0  vision PASS 48 REJECT 0 EMPTY 0  photos /home/pnp/OSHE-PnP/Software/pnpvision/job_20261118_133934
+  2026-11-18 13:42  run 0c4df0d2  check-board        PLACED 23  MISSING 23  placement error 23 parts: mean 0.094 mm, worst 0.229 mm  photos board_check_20261118_134235
+
+Totals, run-job picks per package (good / tried):
+  0603: 121/128 = 94.5 %
+  0805: 3/6 = 50.0 %
+
+Vision: 355 inspections (PASS 308, REJECT 15, EMPTY 32), 342 with a photo. Fill human_agrees (Y/N) in vision_review.csv; accuracy = Y / (Y + N).
+Placement (down camera): 184 footprint checks (PLACED 92, MISSING 92). Fill human_agrees in placement_review.csv.
+Note: place-test runs (e.g. the 0805 sweep) log inspections but not picks: there, each PASS is a good pick and EMPTY / REJECT a failed one.

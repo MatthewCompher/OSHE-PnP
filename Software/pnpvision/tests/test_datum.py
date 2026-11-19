@@ -62,6 +62,26 @@ def test_pose_recovered():
     assert err < 0.02 and abs(out["s"] - 1) < 5e-4 and abs(out["rot_deg"] - 3.0) < 0.1
 
 
+def test_image_scale_error_shows_in_grid_not_dots():
+    """Motion map 5% off at the datum's height (what we saw on the real machine): the grid,
+    read off one image, comes out 5% big, but centring on each dot uses machine moves only,
+    so the dots-only fit must still read scale 1.00 and the dots must still be found."""
+    th = np.radians(7)
+    M_true = -40.0 * np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]]) @ np.diag([1, -1])
+    motion = MotionMap(M_true / 1.05, "camera")          # believes 5% fewer px per mm
+    pose_true = pose_of(-0.8, (120.3, 85.2))
+    cam_offset = np.array([-32.1, 4.7])
+    view = lambda x, y: render(np.array([x, y]) + cam_offset, M_true, pose_true)
+    to_m = lambda px, x, y: np.array([x, y]) + cam_offset + motion.offset_mm(np.array(px) - PRINCIPAL)
+    start = to_machine_xy(pose_true, G.grid_center_mm) - cam_offset
+    r_px = G.dot_diameter_mm / 2 / motion.mm_per_px
+    out = measure_datum(view, to_m, G, start, cam_offset, 0.0, r_px, PRINCIPAL)
+    assert abs(out["grid_only"]["s"] - 1.05) < 0.01, out["grid_only"]
+    assert abs(out["dots_only"]["s"] - 1.0) < 0.002, out["dots_only"]
+    err = np.linalg.norm(out["dots_mm_measured"] - to_machine_xy(pose_true, np.array(G.dots_mm)), axis=1).max()
+    assert err < 0.02, err
+
+
 def test_resolves_180_symmetry_with_prior():
     out, err = run(183.0, prior=180.0)
     assert err < 0.02 and abs((out["rot_deg"] - 183.0 + 180) % 360 - 180) < 0.1

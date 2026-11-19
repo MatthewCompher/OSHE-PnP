@@ -7,38 +7,91 @@ settle_s = 0.25               # wait after a move before grabbing a frame
 
 [machine]
 # Software travel limits: vision-driven moves outside these are refused.
-x_range = [0.0, 300.0]
-y_range = [0.0, 300.0]
-z_range = [0.0, 60.0]
+# Inside the live printer.cfg limits (X -5..235, Y -5..343, Z 0..51).
+x_range = [0.0, 235.0]
+y_range = [0.0, 343.0]
+z_range = [0.0, 51.0]        # 51 = just past plate contact (Z ~50), matches printer.cfg
+# Z on this machine: 0 = homed at the top, LARGER Z = nozzle LOWER.
+#   nozzle tip touches the staging plate at Z ~ 50; touches the PCB top at Z ~ 38.
+# Tallest things on the plate: reject bin 15 mm, datum 11 mm, PCB clamps 8-10 mm.
+# Before ANY X/Y move, vision lifts the nozzle to at least this Z (smaller = higher); a nozzle
+# that is already higher stays there (it is never lowered before an X/Y move).
+# 26 (2026-11-14, was 30): clears the feeders near their pick spots (user: "at most Z26 near the
+# pick location") and is ~24 mm over the plate / ~9 mm over the reject bin. At the very front
+# (Y ~ 0) the feeders need Z22 or higher: only homing goes there, and it raises Z to Z5 first.
+safe_travel_z = 26.0
+# Feeders at the front: any X/Y move that starts or ends at Y < front_zone_y first lifts the
+# nozzle to front_zone_z or higher (user, 2026-11-14: "anything less than Y30 is risky", Z22 safe
+# at Y0). Manual jogs in Mainsail / on the screen are NOT guarded: raise Z first near the front.
+front_zone_y = 30.0
+front_zone_z = 22.0
 # Measured offsets (down_cam_offset_mm, up_cam_xy_mm) live in calibration/machine.json,
-# written by the calibrate-* commands.
+# written by the calibrate-* commands. For reference, CAD puts the down camera about
+# 7.71 mm (X) and 53.037 mm (Y) from the nozzle; calibrate-offset measures the real value.
 
-[cameras.up]                  # ASSUMPTION: cam_A is the up-facing one. Swap if wrong.
-device = "/dev/v4l/by-path/REPLACE_ME-video-index0"
-calibration = "calibration/calibration_cam_A.npz"
+# Cameras are read from crowsnest's snapshot URLs, so crowsnest and the Mainsail
+# views keep running. width/height must match crowsnest.conf AND the calibration .npz.
+# (To open a device directly instead, remove snapshot_url and set device/fps/exposure;
+#  crowsnest must then not be using that camera.)
+[cameras.up]                  # InnoMaker 720P, crowsnest [cam 2]
+snapshot_url = "http://localhost/webcam2/?action=snapshot"
+calibration = "calibration/calibration_cam_up.npz"
 motion_map = "calibration/motion_up.json"
 width = 1280
 height = 720
-fps = 30
-exposure = 0                  # 0 = leave camera auto; else manual UVC exposure value
 
-[cameras.down]
-device = "/dev/v4l/by-path/REPLACE_ME-video-index0"
-calibration = "calibration/calibration_cam_b.npz"
+[cameras.down]                # Arducam 12MP, crowsnest [cam 1]
+snapshot_url = "http://localhost/webcam/?action=snapshot"
+calibration = "calibration/calibration_cam_down.npz"
 motion_map = "calibration/motion_down.json"
-width = 1280
-height = 720
-fps = 30
-exposure = 0
+working_distance_mm = 11.5    # lens to PCB top; image scale changes ~1/11.5 per mm of height
+width = 1920
+height = 1080
+
+[lighting.down]                 # [led_effect vision_light] on neopixel LEDs 2-3 (LEDS.cfg)
+type = "klipper_macro"
+on_macro = "VISION_LIGHT_ON"
+off_macro = "VISION_LIGHT_OFF"
+on_when_opened = true           # switched on before every down-camera command, then left on
+settle_s = 0.3                  # wait for the LEDs and camera exposure to settle
 
 [lighting.up]                   # light rig that illuminates the part on the nozzle
-type = "none"                   # none | klipper_pin | klipper_led | gpio
-name = "up_light"               # Klipper object name (or BCM pin number for gpio)
+type = "klipper_led"            # none | klipper_pin | klipper_led | gpio
+name = "up_light"               # [neopixel up_light] in LEDS.cfg: 6 x WS2812 on the Uno, D11 = uno:PB3
 level = 1.0                     # 0..1 (PWM); use 1.0 for plain on/off pins
-settle_s = 0.20                 # wait after switching, before the frame that counts
+settle_s = 0.10                 # wait after switching, before the frame that counts
 ambient_subtract = false        # also grab a light-off frame and subtract it
-keep_on = false                 # true = never switch (saves ~settle_s per inspection)
+keep_on = true                  # true = leave it on: switching makes the camera re-adjust exposure
 search_radius_mm = 6.0          # how far from the nozzle axis to look for the part
+
+[rotation]
+stepper = "stepper_r"           # [manual_stepper stepper_r] in printer.cfg (rotation_distance 360: units = degrees)
+# Software limit on Klipper's angle for this stepper. There is no endstop, so 0 = wherever the
+# nozzle was at Klipper start. The LumenPnP head has a rotary pneumatic fitting, so the vacuum
+# hose should NOT wind up; the wide range below is just a sanity guard. Tighten it if anything
+# on your head (wiring, a hose without a rotary fitting) can wind up.
+range_deg = [-3600.0, 3600.0]
+symmetry_deg = 180.0            # 180 = a part looks the same turned 180 deg (resistors, caps)
+# Part angle change (machine frame, as the cameras report it) per motor degree. Measured
+# 2026-11-11 with inspect-up: motor 0 -> 30 -> 60 gave part 95.3 -> 66.1 -> 36.6 deg.
+direction = -1.0
+
+[run]
+# run-job Z speeds in mm/min (larger Z = lower). Keep all <= 3000 (printer.cfg max_z_velocity 50
+# mm/s). Leave a key out to use the default in runner.py. Old values, before 2026-11-14:
+# approach 300, touch 60, release_lift 60, lift 600, inspect 300.
+z_feeds = { approach = 3000, touch = 1500, release_lift = 1500, lift = 3000, inspect = 3000 }
+# Speed tuning (2026-11-17). Change ONE line at a time, run 3-5 parts, compare the cycle line.
+# Values here are the old defaults, so nothing changes until you edit them.
+xy_feedrate = 24000             # mm/min run-job X/Y travel (400 mm/s; printer.cfg allows 600 mm/s)
+accel = 5000                    # mm/s^2 during run-job (printer.cfg max_accel 7500); restored after
+vac_ms = 150                    # vacuum on -> lift at the pick
+release_ms = 200                # vacuum off -> lift at the place / reject bin
+verify = false                   # false = skip the empty-nozzle check after placing (~8 s)
+align_each_job = true           # re-find the board (align-board) before every job; not counted in CPH
+flip_check = true               # resistors: reject parts picked upside down (dark top facing the camera)
+# pick_press = 0.4              # mm below the taught part top at the pick
+# place_press = 0.3             # mm below the part top on the board at the place
 
 [log]
 db = "pnp_events.sqlite"
@@ -46,12 +99,52 @@ db = "pnp_events.sqlite"
 [datum]
 # Geometry from the Fusion sketch. Datum frame: origin = lower-left dot, +Y toward the
 # top of the drawing (the "north" of the upside-down L), viewed from above.
-pitch_mm = 4.0                  # grid line-centre to line-centre
+pitch_mm = 4.0                  # grid line-centre to line-centre (confirmed; lines ~0.8 mm wide)
 cols = 4                        # cells across (along datum X)
 rows = 3                        # cells down (along datum Y)
-grid_center_mm = [15.0, 40.0]   # ASSUMPTION: grid centreline passes through the right dot. CONFIRM.
-dots_mm = [[0.0, 0.0], [0.0, 30.0], [40.0, 40.0]]
-dot_diameter_mm = 3.0
+grid_center_mm = [15.0, 40.0]   # confirmed
+dots_mm = [[0.0, 0.0], [0.0, 30.0], [40.0, 40.0]]   # confirmed (white dots on the black body)
+dot_diameter_mm = 3.0           # confirmed, +- print tolerance
+# On the staging plate (plate frame, from its front-left corner): dot 0 at about (40, 60) mm;
+# up camera centre at about (100, 40) mm. Placed by hand, so expect ~1 deg of rotation.
 # Rotation of the datum's +X axis relative to machine +X (degrees, CCW from above).
 # Only needs to be right to +-45 deg; it resolves the grid's 180-degree symmetry.
 expected_rotation_deg = 0.0
+# Fixed 0-255 black/white cut-offs (the printed datum is sparkly under the LEDs, so automatic
+# Otsu thresholding fails). Measured 2026-11-09: grid cells found at 200-230 (not 240); the white
+# dots only come out round (>0.85) at 230-245. Remove a line = automatic (Otsu).
+grid_threshold = 215
+dot_threshold = 238
+[layout]
+# Fixed fixtures on the 290 x 290 mm staging plate. PLATE frame: mm from the plate's
+# front-left corner. Heat-set inserts every 30 mm from (10, 10) to (280, 280), so insert
+# (i, j) is at (10 + 30*i, 10 + 30*j); insert (0, 0) is the front-left one.
+# Machine coordinates of these are not known yet: once the datum is measured, the datum's
+# own pose fixes the plate frame in the machine (the datum is bolted at known inserts).
+insert_pitch_mm = 30.0
+insert_origin_mm = [10.0, 10.0]
+datum_inserts = [[1, 3], [1, 2], [2, 3]]   # corner, bottom leg, right leg -> (40,100) (40,70) (70,100)
+reject_bin_inserts = [[1, 4], [2, 4]]      # wide, narrow bin from (40,130) to (70,130); 15 mm tall
+reject_bin_offset_mm = [0.0, 0.0]          # bin opening centre minus the middle of its inserts (plate mm); the default drop spot
+up_cam_insert = [3, 1]                     # camera centre where insert (3,1) would be -> (100, 40)
+reject_bin_height_mm = 15.0
+datum_height_mm = 11.0
+clamp_height_mm = 10.0
+
+[feeders]
+# bus "klipper": servos on the Uno, Klipper/pnp_feeders.cfg; a feed = `<macro> SLOT=n`, where n is the
+# feeder's "servo" in feeders.json (slot, left to right). bus "serial": the old feeder Nano
+# (Software/feeder_nano/feeder_nano.ino) on USB, using port/baud/timeout_s below.
+bus = "klipper"
+macro = "FEEDER_TOGGLE"
+port = "/dev/ttyUSB0"
+baud = 115200
+timeout_s = 8.0                 # a stroke takes ~1-1.5 s (firmware: 90 deg out and back at 5 ms/deg + 2 x 250 ms)
+file = "calibration/feeders.json"   # written by teach-feeder
+
+# [packages."<KiCad footprint>"] overrides/additions to pnpvision/parts.py DEFAULT_PACKAGES, e.g.
+# [packages."C_0805_2012Metric"]
+# body_mm = [2.0, 1.25]
+# axis_deg = 0.0
+# symmetric = true
+# tip = "N14"

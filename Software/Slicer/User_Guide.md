@@ -49,10 +49,11 @@ This guide covers everything the program does. For the file format itself, see
 - chooses 2–4 **alignment pads** the machine's camera can find;
 - writes one job file per board side.
 
-**It deliberately does not** produce machine coordinates, Z heights, feeder positions,
-nozzle choices or G-code. The runner works all of that out on the machine, because it
+**It deliberately does not** put machine coordinates, Z heights, feeder positions or
+nozzle choices in the job file. The runner works all of that out on the machine, because it
 depends on where the board lands, how each part sits on the nozzle, and the machine's
-calibration.
+calibration. (Optionally it also writes a **dry-run G-code** of the placements in board
+coordinates: see [section 15](#15-exporting-the-job-file).)
 
 **Only SMD parts are placed.** Through-hole parts are skipped, and so are parts marked
 *Exclude from position files* or *Not in schematic / board only*. Parts marked
@@ -64,7 +65,14 @@ flagged to be skipped (see [section 10](#10-excluding-parts) and
 
 ## 2. Starting the program
 
-### From VS Code (normal use)
+### The Windows app (easiest)
+
+Double-click **`pnpslice.exe`** (from the repository's Releases, or built with
+`build_exe.ps1` into `Slicer\dist\`). Nothing to install. It opens the board you used last;
+dropping a `.kicad_pcb` file onto `pnpslice.exe` opens that board instead. The first start takes
+a few seconds while it unpacks.
+
+### From VS Code (from source)
 
 1. Open the `Slicer` folder in VS Code.
 2. Open `run.py`.
@@ -537,6 +545,23 @@ In Preview, click **Export job…** (or press `Ctrl+E`). The save dialog suggest
 It opens in the folder you last exported to, or next to the board the first time. Export
 each plate you need; each is a separate file.
 
+**To the machine without a network:** export straight onto an SD card or USB stick (top folder,
+or one folder down), then on the machine's touchscreen tap **Pick & Place -> Job -> Load jobs from
+SD card / USB stick**. Keep the name ending in `.job.json` and use only letters, digits, spaces,
+`_`, `.` and `-`.
+
+### Dry-run G-code (optional)
+
+Tick **+ dry-run G-code** (next to **Export job…**) and the export also writes
+`<board>-top_dryrun.gcode` next to the job file: for every part to place, in order, a
+`PNP_BOARD_MOVE X= Y=` line in **board coordinates** and a short pause. The setting is
+remembered. The command line does the same with `pnpslice slice BOARD --gcode`.
+
+It is a preview and record of the placements as G-code. The machine runs jobs from the
+`.job.json` (placing needs the cameras, feeders and retries). The `PNP_*` macros it calls are not
+on the machine yet, so if the file is printed, Klipper stops at its first command and nothing
+moves.
+
 Before giving a file to the runner, it's worth a quick look in VS Code (it's plain
 JSON, one placement per line) to see the order and values are what you expect.
 
@@ -584,7 +609,8 @@ Here's a shortened example from the test board's bottom side:
 | `kicad_ref` | Only on auto-numbered parts: the reference in KiCad |
 
 **Not in the file, on purpose:** `feeder` and `nozzle`. The spec says missing means
-"assigned at the machine". There are also no machine coordinates, Z values or G-code.
+"assigned at the machine". There are also no machine coordinates, Z values or G-code
+(the optional dry-run G-code is a separate file).
 
 ---
 

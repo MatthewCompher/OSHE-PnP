@@ -83,3 +83,71 @@ class Camera:
 
     def __exit__(self, *a):
         self.stop()
+
+
+class SnapshotCamera:
+    """Frames from crowsnest/ustreamer's snapshot URL, so crowsnest (and the Mainsail
+    views) keep running while vision works. Same interface as Camera.
+
+    Freshness: ustreamer caches its newest frame, so one fetch right after a move can
+    return a frame exposed while the toolhead was still moving. fresh() waits settle_s,
+    fetches once, then keeps fetching until ustreamer's X-Timestamp changes: that next
+    frame was captured after the request, i.e. after the machine settled.
+    """
+
+    def __init__(self, url, width, height, name="cam", timeout=5.0):
+        self.url, self.width, self.height, self.name = url, width, height, name
+        self.timeout = timeout
+        self._frame, self._t = None, 0.0
+
+    def _fetch(self):
+        import urllib.request
+        import numpy as np
+        with urllib.request.urlopen(self.url, timeout=self.timeout) as r:
+            data, ts = r.read(), r.headers.get("X-Timestamp")
+        frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise RuntimeError(f"{self.name}: snapshot from {self.url} is not an image "
+                               "(is crowsnest running? try it in a browser)")
+        return frame, ts
+
+    def start(self):
+        frame, _ = self._fetch()
+        h, w = frame.shape[:2]
+        if (w, h) != (self.width, self.height):
+            raise RuntimeError(f"{self.name}: snapshot is {w}x{h}, config says "
+                               f"{self.width}x{self.height}. Fix crowsnest.conf or config.toml; "
+                               "the calibration is only valid at its own resolution.")
+        self._frame, self._t = frame, time.monotonic()
+        return self
+
+    def latest(self):
+        return (None if self._frame is None else self._frame.copy()), self._t
+
+    def fresh(self, settle_s=0.15, timeout=2.0):
+        time.sleep(settle_s)
+        _, ts0 = self._fetch()
+        t_end = time.monotonic() + timeout
+        while True:
+            frame, ts = self._fetch()
+            if ts is None:                        # no timestamp header: just skip a frame
+                time.sleep(0.15)
+                frame, _ = self._fetch()
+                break
+            if ts != ts0:
+                break
+            if time.monotonic() > t_end:
+                raise TimeoutError(f"{self.name}: snapshot frame never updated "
+                                   "(is the camera stream frozen?)")
+            time.sleep(0.01)
+        self._frame, self._t = frame, time.monotonic()
+        return frame.copy()
+
+    def stop(self):
+        pass
+
+    def __enter__(self):
+        return self.start()
+
+    def __exit__(self, *a):
+        self.stop()

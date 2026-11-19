@@ -10,6 +10,7 @@ import sys
 from . import __version__
 from .board import SIDES, Board, BoardError, load_board
 from .crosscheck import check_against_gerbers
+from .gcode import write_dryrun_gcode
 from .job import build_job, default_filename, write_job
 from .plate import ORIGIN_OFFSET_WARN_MM, build_plates
 from .project import ProjectSettings
@@ -151,6 +152,8 @@ def cmd_slice(args) -> int:
         path = os.path.join(out_dir, default_filename(board, plate.side))
         write_job(path, job)
         print(f"  -> {path}")
+        if args.gcode:
+            print(f"  -> {write_dryrun_gcode(path, job)}")
     return status
 
 
@@ -176,6 +179,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-o", "--out", help="folder for the job files (default: next to the board)")
     p.add_argument("--auto-number", action="store_true",
                    help="number duplicate/unnumbered references automatically (job file only)")
+    p.add_argument("--gcode", action="store_true",
+                   help="also write <job>_dryrun.gcode (the placements as G-code, board coordinates)")
     p.set_defaults(func=cmd_slice)
 
     args = ap.parse_args(argv)

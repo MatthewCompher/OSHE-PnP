@@ -1,0 +1,6 @@
+# Lets the "Load jobs from SD card / USB stick" button (pnpvision import-jobs, started by Klipper as
+# user pnp) mount a USB stick or SD card READ-ONLY at /mnt/pnp_usb and unmount it, without a password.
+# Nothing else is allowed. Install (Pi SSH), checking the syntax before it goes live:
+#   cp ~/OSHE-PnP/Software/Klipper/sudoers-pnp-usb-import /tmp/pnp-usb-import
+#   sudo visudo -cf /tmp/pnp-usb-import && sudo install -m 440 -o root -g root /tmp/pnp-usb-import /etc/sudoers.d/pnp-usb-import
+pnp ALL=(root) NOPASSWD: /usr/bin/mkdir -p /mnt/pnp_usb, /usr/bin/mount -o ro\,nosuid\,nodev\,noexec /dev/sd* /mnt/pnp_usb, /usr/bin/umount /mnt/pnp_usb

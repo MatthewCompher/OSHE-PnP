@@ -1,5 +1,9 @@
 # OSHE Pick and Place: documentation site
 
+> **Superseded (2026-11-18):** the current documentation is the MkDocs site in
+> `Documentation/docs/` (config `Documentation/mkdocs.yml`). Its content was carried over and
+> updated from these pages; this folder is kept for reference until the team decides to remove it.
+
 Plain static HTML. Open `index.html` in a browser, or host the folder anywhere (GitHub Pages works).
 
 | File | Page |

@@ -1,0 +1,50 @@
+# Builds the documentation site (Documentation/, MkDocs) as a check on every change, and publishes
+# it with GitHub Pages ONLY when the team switches publishing on. Until then nothing is published.
+# To publish (repo admin, OSHE-Github/OSHE-PnP):
+#   1. Settings -> Pages -> Source: GitHub Actions
+#   2. Settings -> Secrets and variables -> Actions -> Variables: add PUBLISH_DOCS = true
+#   3. Custom domain (e.g. pnp.oshe.io): set it in Settings -> Pages, and set site_url in mkdocs.yml
+name: docs
+
+on:
+  push:
+    branches: [main]
+    paths: ["Documentation/**", ".github/workflows/docs.yml"]
+  pull_request:
+    paths: ["Documentation/**", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r Documentation/requirements-docs.txt
+      - run: mkdocs build --strict -f Documentation/mkdocs.yml     # -> Documentation/site
+      - uses: actions/upload-pages-artifact@v3
+        if: vars.PUBLISH_DOCS == 'true' && github.event_name != 'pull_request'
+        with:
+          path: Documentation/site
+
+  deploy:
+    needs: build
+    if: vars.PUBLISH_DOCS == 'true' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
